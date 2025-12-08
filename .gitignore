@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+
+# Expo & Metro Caches/Build
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+.metro-health-check*
+
+# Configuration & IDEs
+.env
+.vscode/
+*.tsbuildinfo
+
+# Build Artifacts
+android/
+ios/
+build/
+coverage/
+
+# Native Caches/Dependencies
+.gradle/
+DerivedData/
+Pods/
+.kotlin/
+
+# Sensitive Native Files (Certificates, Keys)
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Debug & Logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS Specific
+.DS_Store
+*.pem
+
+# Local Environment Overrides
+.env*.local
