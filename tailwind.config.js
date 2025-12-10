@@ -1,21 +1,47 @@
 /** @type {import('tailwindcss').Config} */
-export const content = ["./App.tsx", "./app/**/*.{js,jsx,ts,tsx}", "./components/**/*.{js,jsx,ts,tsx}"];
-export const presets = [require("nativewind/preset")];
-export const theme = {
-  extend: {
-    colors: {
-      primary : '#030014',
-      secondary : '#151312',
-      light: {
-        100: '#D6C6FF',
-        200: '#A8B5DB',
-        300: '#9CA4AB',
+module.exports = {
+  content: ["./app/**/*.{js,jsx,ts,tsx}", "./components/**/*.{js,jsx,ts,tsx}"],
+  presets: [require("nativewind/preset")],
+  theme: {
+    extend: {
+      colors: {
+        // BACKGROUND: Soft Off-White
+        primary: "#F9FAFB", 
+
+        // CARDS/SURFACES: Pure White
+        card: "#FFFFFF",
+
+        // BRAND: Your "Eco-Teal" (Unchanged)
+        secondary: {
+          DEFAULT: "#4EA89A", 
+          100: "#E0F2F1",     // Very light teal for backgrounds
+          200: "#2D665B",     // Darker teal for text/borders
+        },
+
+        // TEXT: Dark Gray for readability on light bg
+        dark: {
+          DEFAULT: "#1F2937", // Main Text
+          100: "#4B5563",     // Secondary Text
+          200: "#9CA3AF",     // Placeholders
+        },
+        
+        // Status Colors
+        danger: "#EF4444",
+        success: "#22C55E",
+        warning: "#F59E0B",
       },
-      dark: {
-        100: '#221F3D',
-        200: '#0F0D23',
-      }
-    }
+      fontFamily: {
+        pthin: ["Poppins-Thin", "sans-serif"],
+        pextralight: ["Poppins-ExtraLight", "sans-serif"],
+        plight: ["Poppins-Light", "sans-serif"],
+        pregular: ["Poppins-Regular", "sans-serif"],
+        pmedium: ["Poppins-Medium", "sans-serif"],
+        psemibold: ["Poppins-SemiBold", "sans-serif"],
+        pbold: ["Poppins-Bold", "sans-serif"],
+        pextrabold: ["Poppins-ExtraBold", "sans-serif"],
+        pblack: ["Poppins-Black", "sans-serif"],
+      },
+    },
   },
+  plugins: [],
 };
-export const plugins = [];
