@@ -28,7 +28,7 @@ export default function Result() {
   const urlParams = useLocalSearchParams();
 
   // --- DUMMY DATA CONFIGURATION ---
-  const TEST_MODE = true; // Set to FALSE when you want to use real form data
+  const TEST_MODE = false; // Set to FALSE when you want to use real form data
   
   const dummyData = {
     name: "Sample Villa",

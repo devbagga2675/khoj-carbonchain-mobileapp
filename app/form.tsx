@@ -189,7 +189,7 @@ const handleSubmit = () => {
           <TouchableOpacity 
             className="w-11 h-11 rounded-full bg-[#4EA89A] items-center justify-center mb-6 shadow-md shadow-[#4EA89A] elevation-4"
             activeOpacity={0.8} 
-            onPress={() => console.log('Go Back')}
+            onPress={() => router.back()}
           >
             <Text className="text-white text-2xl font-bold">←</Text> 
           </TouchableOpacity>
