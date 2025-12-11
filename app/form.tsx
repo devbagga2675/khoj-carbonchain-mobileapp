@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { 
   View, 
@@ -155,10 +156,29 @@ export default function Form() {
     });
   };
 
-  const handleSubmit = () => {
-    console.log('Active Payload:', formData);
-    Alert.alert("Success", "Calculation Complete");
+const handleSubmit = () => {
+  // TEST MODE: Using dummy data to visualize the result page
+  const payload = {
+    name: "Eco Test Home",
+    address: "42 Green Way, Vadodara",
+    gridElectricity: "450", 
+    gasPNG: "25",            
+    cngCylinder: "0",       
+    petrol: "40",            
+    diesel: "0",             
+    cng: "15",              
+    solarPanels: "4",       
+    solarCapacity: "1.5",    
+    treeCount: "5"           
   };
+
+  console.log('Sending Dummy Payload:', payload);
+
+  router.push({
+    pathname: "/result",
+    params: { ...formData } as any
+  });
+};
 
   return (
     <SafeAreaView className="flex-1 bg-white">
