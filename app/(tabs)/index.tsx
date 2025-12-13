@@ -2,14 +2,17 @@ import React, { useRef, useEffect } from "react";
 import {
   View,
   Text,
-  StyleSheet,
-  Image,
   TouchableOpacity,
   Animated,
   Dimensions,
+  Image,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+
+// Ideally, this image would be imported locally or via URI.
+// Using a placeholder based on your context.
+const EARTH_IMAGE = require("../../assets/earth.png"); // Ensure you have this path or replace it
 
 const { width } = Dimensions.get("window");
 
@@ -42,254 +45,91 @@ export default function Index() {
   });
 
   return (
-    <View style={styles.container}>
-
+    <View className="flex-1 bg-[#040d07] px-5 pt-12">
       {/* GREEN BACKGROUND BLOBS */}
+      {/* Top Blob */}
       <LinearGradient
         colors={["rgba(34,197,94,0.35)", "transparent"]}
-        style={styles.blobTop}
+        className="absolute w-[300px] h-[300px] -top-[90px] -left-[90px] rounded-full"
+        style={{ borderRadius: 150 }}
       />
-
+      {/* Bottom Blob */}
       <LinearGradient
         colors={["transparent", "rgba(34,197,94,0.3)"]}
-        style={styles.blobBottom}
+        className="absolute w-[300px] h-[300px] -bottom-[90px] -right-[90px]"
+        style={{ borderRadius: 150 }}
       />
-
       {/* Content */}
-      <View style={styles.inner}>
+      <View className="w-full items-center">
         {/* Eyebrow text */}
-        <View style={styles.eyebrowWrap}>
-          <View style={styles.eyebrowDot} />
-          <Text style={styles.eyebrow}>SUSTAINABLE FUTURE</Text>
+        <View className="flex-row items-center mb-1.5 mt-2.5">
+          <View className="w-2.5 h-2.5 bg-green-500 rounded-full mr-1.5 shadow-sm shadow-green-500" />
+          <Text className="text-green-500 text-xs tracking-[2px]">
+            SUSTAINABLE FUTURE
+          </Text>
         </View>
 
-        <Text style={styles.title}>
-          AI Powered <Text style={styles.titleGradient}>Carbon Assistant</Text>
+        {/* Title */}
+        <Text className="text-[32px] text-[#eafdf4] text-center font-bold mt-2.5 leading-10">
+          AI Powered <Text className="text-green-500">Carbon Assistant</Text>
         </Text>
 
-        <Text style={styles.subText}>
+        {/* Subtitle */}
+        <Text className="text-[#eafdf4] text-base text-center mt-3 opacity-90">
           Your personal guide towards a cleaner, greener, smarter lifestyle.
         </Text>
 
-        <Text style={styles.desc}>
-          Track emissions, get AI guidance, reduce footprint & achieve carbon-free living with intelligent recommendations.
+        {/* Description */}
+        <Text className="mt-2.5 text-[#d1fadf] text-sm text-center leading-5 w-[90%]">
+          Track emissions, get AI guidance, reduce footprint & achieve
+          carbon-free living with intelligent recommendations.
         </Text>
 
         {/* BUTTONS */}
-        <View style={styles.btnRow}>
+        <View className="flex-row mt-6 gap-3">
           <TouchableOpacity
-            style={styles.btnPrimary}
-            onPress={() => console.log("Chat route not yet implemented")} // Placeholder for Chat
+            className="bg-green-500 py-3 px-[22px] rounded-full shadow-md shadow-green-500/40"
+            onPress={() => router.push("/form")}
+            // onPress={() => router.push("/auth/login")}
           >
-            <Text style={styles.btnPrimaryText}>Start Chat</Text>
+            <Text className="text-black font-bold text-[15px]">
+              Calculate Carbon
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.btnGhost}
-            onPress={() => router.push("/form")} // Mapped to your Form route
+            className="border border-green-500 py-3 px-[22px] rounded-full"
+            onPress={() => console.log("Chat route not yet implemented")}
           >
-            <Text style={styles.btnGhostText}>Carbon Calculator</Text>
+            <Text className="text-[#eafdf4] font-semibold">Start Chat</Text>
           </TouchableOpacity>
         </View>
 
-        {/* EARTH + ANIMATIONS */}
-        <View style={styles.earthWrapper}>
-          {/* Ensure you have the asset at this path or update the require */}
-          <Image
-            source={require("../../assets/earth.png")}
-            style={styles.earth}
-          />
+        {/* EARTH SECTION (Reconstructed from your styles) */}
+        <View className="mt-10 w-[60vw] h-[60vw] items-center justify-center relative">
+          {/* Inner Ring (Dashed) */}
+          <View className="absolute w-[115%] h-[115%] rounded-full border-2 border-dashed border-green-500/50 z-10" />
 
-          {/* Dashed rotating ring */}
-          <View style={styles.ring} />
+          {/* Outer Ring */}
+          <View className="absolute w-[140%] h-[140%] rounded-full border-2 border-green-500/30" />
 
-          {/* Outer ring */}
-          <View style={styles.ring2} />
+          {/* Earth Image Container */}
+          <View className="w-full h-full rounded-full z-20 overflow-hidden bg-black/50">
+            {/* Replace source with your actual image */}
+            <Image
+              source={EARTH_IMAGE}
+              className="w-full h-full opacity-80"
+              resizeMode="cover"
+            />
+          </View>
 
-          {/* Floating animated dot */}
+          {/* Floating Animation Dot */}
           <Animated.View
-            style={[
-              styles.dot,
-              {
-                transform: [{ translateY: dotTranslate }],
-              },
-            ]}
+            style={{ transform: [{ translateY: dotTranslate }] }}
+            className="absolute -top-5 w-3.5 h-3.5 bg-green-500 rounded-full shadow-lg shadow-green-500 z-30"
           />
         </View>
       </View>
     </View>
   );
 }
-
-// =====================================================
-//                STYLES
-// =====================================================
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#040d07",
-    paddingHorizontal: 20,
-    paddingTop: 50,
-  },
-
-  inner: {
-    width: "100%",
-    alignItems: "center",
-  },
-
-  /* Background blobs */
-  blobTop: {
-    position: "absolute",
-    width: 300,
-    height: 300,
-    top: -90,
-    left: -90,
-    borderRadius: 200,
-  },
-  blobBottom: {
-    position: "absolute",
-    width: 300,
-    height: 300,
-    bottom: -90,
-    right: -90,
-    borderRadius: 200,
-  },
-
-  /* Eyebrow */
-  eyebrowWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 6,
-    marginTop: 10,
-  },
-  eyebrow: {
-    color: "#22c55e",
-    fontSize: 12,
-    letterSpacing: 2,
-  },
-  eyebrowDot: {
-    width: 10,
-    height: 10,
-    backgroundColor: "#22c55e",
-    borderRadius: 50,
-    marginRight: 6,
-    shadowColor: "#22c55e",
-    shadowOpacity: 0.7,
-    shadowRadius: 6,
-  },
-
-  /* Title */
-  title: {
-    fontSize: 32,
-    color: "#eafdf4",
-    textAlign: "center",
-    fontWeight: "700",
-    marginTop: 10,
-    lineHeight: 40,
-  },
-  titleGradient: {
-    color: "#22c55e",
-  },
-
-  subText: {
-    color: "#eafdf4",
-    fontSize: 16,
-    textAlign: "center",
-    marginTop: 12,
-    opacity: 0.9,
-  },
-
-  desc: {
-    marginTop: 10,
-    color: "#d1fadf",
-    fontSize: 14,
-    textAlign: "center",
-    lineHeight: 20,
-    width: "90%",
-  },
-
-  /* Buttons */
-  btnRow: {
-    flexDirection: "row",
-    marginTop: 25,
-    gap: 12,
-  },
-
-  btnPrimary: {
-    backgroundColor: "#22c55e",
-    paddingVertical: 12,
-    paddingHorizontal: 22,
-    borderRadius: 50,
-    shadowColor: "#22c55e",
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-  },
-  btnPrimaryText: {
-    color: "#000",
-    fontWeight: "700",
-    fontSize: 15,
-  },
-
-  btnGhost: {
-    borderWidth: 1,
-    borderColor: "#22c55e",
-    paddingVertical: 12,
-    paddingHorizontal: 22,
-    borderRadius: 50,
-  },
-  btnGhostText: {
-    color: "#eafdf4",
-    fontWeight: "600",
-  },
-
-  /* Earth Section */
-  earthWrapper: {
-    marginTop: 40,
-    width: width * 0.6,
-    height: width * 0.6,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  earth: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 200,
-    zIndex: 3,
-  },
-
-  ring: {
-    position: "absolute",
-    width: "115%",
-    height: "115%",
-    borderRadius: 300,
-    borderWidth: 2,
-    borderStyle: "dashed",
-    borderColor: "rgba(34,197,94,0.5)",
-    zIndex: 1,
-  },
-
-  ring2: {
-    position: "absolute",
-    width: "140%",
-    height: "140%",
-    borderRadius: 300,
-    borderWidth: 2,
-    borderColor: "rgba(34,197,94,0.3)",
-  },
-
-  /* Floating dot */
-  dot: {
-    position: "absolute",
-    top: -20,
-    width: 14,
-    height: 14,
-    backgroundColor: "#22c55e",
-    borderRadius: 50,
-    shadowColor: "#22c55e",
-    shadowOpacity: 0.8,
-    shadowRadius: 10,
-    zIndex: 10,
-  },
-});

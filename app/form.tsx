@@ -1,23 +1,23 @@
-import { router } from 'expo-router';
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  ScrollView, 
-  SafeAreaView, 
-  LayoutAnimation, 
-  Platform, 
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  SafeAreaView,
+  LayoutAnimation,
+  Platform,
   UIManager,
-  Alert
-
-} from 'react-native';
+  Alert,
+} from "react-native";
 
 // import { styled } from 'nativewind'; // Not strictly needed if using className directly with Babel plugin
 // Enable LayoutAnimation for Android
 if (
-  Platform.OS === 'android' &&
+  Platform.OS === "android" &&
   UIManager.setLayoutAnimationEnabledExperimental
 ) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -28,7 +28,7 @@ export interface CarbonInput {
   address?: string;
   gridElectricity: string;
   gasPNG: string;
-  cngCylinder: string; 
+  cngCylinder: string;
   petrol: string;
   diesel: string;
   cng: string;
@@ -41,113 +41,121 @@ type FieldVisibility = {
   [key in keyof CarbonInput]?: boolean;
 };
 
-// --- EXTRACTED COMPONENTS (Fixes Focus Issue) ---
+// --- EXTRACTED COMPONENTS (Color Scheme Applied) ---
 
-const CheckboxRow = ({ 
-  label, 
-  fieldsToCheck, 
+const CheckboxRow = ({
+  label,
+  fieldsToCheck,
   isVisible,
   onToggle,
-  color = '#4EA89A' 
-}: { 
-  label: string, 
-  fieldsToCheck: (keyof CarbonInput)[], 
-  isVisible: boolean,
-  onToggle: () => void,
-  color?: string 
+  color = "#4EA89A",
+}: {
+  label: string;
+  fieldsToCheck: (keyof CarbonInput)[];
+  isVisible: boolean;
+  onToggle: () => void;
+  color?: string;
 }) => {
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       className="flex-row items-center mb-3"
       onPress={onToggle}
       activeOpacity={0.7}
     >
-      <View 
+      <View
         className="w-5 h-5 rounded border-2 mr-2.5 items-center justify-center"
-        style={{ 
-          backgroundColor: isVisible ? color : 'transparent',
-          borderColor: isVisible ? color : '#cbd5e1'
+        style={{
+          // The color prop for the active state is used directly here for variety (e.g., orange, blue, green)
+          backgroundColor: isVisible ? color : "transparent",
+          borderColor: isVisible ? color : "#3B82F6", // Using a default Tailwind blue for inactive border
         }}
       >
-        {isVisible && <View className="w-2.5 h-2.5 bg-white rounded-[1px]" />}
+        {/* Switched inner box to text-dark-DEFAULT (lightest) */}
+        {isVisible && (
+          <View className="w-2.5 h-2.5 bg-dark-DEFAULT rounded-[1px]" />
+        )}
       </View>
-      <Text className="text-sm text-slate-700 font-medium">{label}</Text>
+      {/* Switched text color to high-contrast light text */}
+      <Text className="text-sm text-dark font-medium">{label}</Text>
     </TouchableOpacity>
   );
 };
 
-const InputField = ({ 
-  label, 
-  value, 
+const InputField = ({
+  label,
+  value,
   onChange,
   isVisible,
-  placeholder 
-}: { 
-  label: string, 
-  value: string,
-  onChange: (text: string) => void,
-  isVisible: boolean,
-  placeholder?: string 
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (text: string) => void;
+  isVisible: boolean;
+  placeholder?: string;
 }) => {
   if (!isVisible) return null;
 
   return (
     <View className="ml-[30px] mb-3">
-      <Text className="text-xs text-slate-500 mb-1.5">{label}</Text>
+      {/* Switched label to secondary light text */}
+      <Text className="text-xs text-dark-100 mb-1.5">{label}</Text>
       <TextInput
-        className="h-10 border border-slate-200 rounded-md px-3 bg-slate-50 text-sm text-slate-900"
+        // Switched input background to card, border to primary-dark, text to high-contrast light
+        className="h-10 border border-secondary-200 rounded-md px-3 bg-card text-sm text-dark"
         value={value}
         onChangeText={onChange}
         placeholder={placeholder}
-        placeholderTextColor="#cbd5e1"
+        // Switched placeholder color to subtle neutral
+        placeholderTextColor="#86EFAC"
         keyboardType="numeric"
       />
     </View>
   );
 };
 
-// --- MAIN COMPONENT ---
+// --- MAIN COMPONENT (Color Scheme Applied) ---
 
 export default function Form() {
   const [formData, setFormData] = useState<CarbonInput>({
-    name: '',
-    address: '',
-    gridElectricity: '',
-    gasPNG: '',
-    cngCylinder: '',
-    petrol: '',
-    diesel: '',
-    cng: '',
-    solarPanels: '',
-    solarCapacity: '',
-    treeCount: ''
+    name: "",
+    address: "",
+    gridElectricity: "",
+    gasPNG: "",
+    cngCylinder: "",
+    petrol: "",
+    diesel: "",
+    cng: "",
+    solarPanels: "",
+    solarCapacity: "",
+    treeCount: "",
   });
 
   const [visibleFields, setVisibleFields] = useState<FieldVisibility>({});
 
   const handleChange = (name: keyof CarbonInput, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const toggleVisibility = (fields: (keyof CarbonInput)[]) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    
-    setVisibleFields(prev => {
+
+    setVisibleFields((prev) => {
       const isVisible = !!prev[fields[0]];
       const newState = { ...prev };
 
-      fields.forEach(field => {
+      fields.forEach((field) => {
         newState[field] = !isVisible;
       });
-      
+
       // Data Cleaning
       if (isVisible) {
-        setFormData(currentData => {
+        setFormData((currentData) => {
           const cleanedData = { ...currentData };
-          fields.forEach(f => cleanedData[f] = '');
+          fields.forEach((f) => (cleanedData[f] = ""));
           return cleanedData;
         });
       }
@@ -156,235 +164,260 @@ export default function Form() {
     });
   };
 
-const handleSubmit = () => {
-  // TEST MODE: Using dummy data to visualize the result page
-  const payload = {
-    name: "Eco Test Home",
-    address: "42 Green Way, Vadodara",
-    gridElectricity: "450", 
-    gasPNG: "25",            
-    cngCylinder: "0",       
-    petrol: "40",            
-    diesel: "0",             
-    cng: "15",              
-    solarPanels: "4",       
-    solarCapacity: "1.5",    
-    treeCount: "5"           
+  const handleSubmit = () => {
+    // TEST MODE: Using dummy data to visualize the result page
+    const payload = {
+      name: "Eco Test Home",
+      address: "42 Green Way, Vadodara",
+      gridElectricity: "450",
+      gasPNG: "25",
+      cngCylinder: "0",
+      petrol: "40",
+      diesel: "0",
+      cng: "15",
+      solarPanels: "4",
+      solarCapacity: "1.5",
+      treeCount: "5",
+    };
+
+    console.log("Sending Dummy Payload:", payload);
+
+    router.push({
+      pathname: "/result",
+      params: { ...formData } as any,
+    });
   };
 
-  console.log('Sending Dummy Payload:', payload);
-
-  router.push({
-    pathname: "/result",
-    params: { ...formData } as any
-  });
-};
-
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-primary">
+      {/* Set overall background to primary dark */}
       <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
-        
         {/* Header / Top Card */}
-        <View className="bg-[#F2F9F8] pt-[60px] px-6 pb-8 rounded-b-[32px] mb-6">
-          <TouchableOpacity 
-            className="w-11 h-11 rounded-full bg-[#4EA89A] items-center justify-center mb-6 shadow-md shadow-[#4EA89A] elevation-4"
-            activeOpacity={0.8} 
+        {/* Set card background, rounded bottom corner retained */}
+        <View className="bg-card pt-[60px] px-6 pb-8 rounded-b-xl mb-6">
+          <TouchableOpacity
             onPress={() => router.back()}
+            className=" mb-6 w-10 h-10 rounded-full bg-card items-center justify-center border border-secondary-200"
           >
-            <Text className="text-white text-2xl font-bold">←</Text> 
+            <Ionicons name="arrow-back" size={20} color="#EAFDF4" />
           </TouchableOpacity>
 
-          <Text className="text-[28px] font-extrabold text-slate-800 mb-2 -tracking-[0.5px]">
-            New Assessment
-          </Text>
-          <Text className="text-[15px] text-slate-500 leading-[22px]">
-            Organizing your consumption helps calculate a precise footprint.
-            {"\n"}
-            <Text className="font-semibold text-[#2D665B]">
-              Active Categories: {Object.values(visibleFields).filter(Boolean).length} • 
-              Inputs: {Object.keys(formData).filter(k => formData[k as keyof CarbonInput] !== '').length}
+          <View className="mb-2">
+            <Text className="text-4xl font-bold text-secondary mb-2 tracking-tight">
+              Measure Your Impact
             </Text>
-          </Text>
+            <Text className="text-base text-secondary-100 leading-6 opacity-90">
+              Select the categories that apply to you to input your bimonthly
+              data. Tap the checkboxes to reveal fields for your emissions and
+              green assets.
+            </Text>
+          </View>
+          {/* <Text className="text-[15px]  leading-[22px]">
+            <Text className="font-semibold text-dark-100">
+              Active Categories:{" "}
+              {Object.values(visibleFields).filter(Boolean).length} • Inputs:{" "}
+              {
+                Object.keys(formData).filter(
+                  (k) => formData[k as keyof CarbonInput] !== ""
+                ).length
+              }
+            </Text>
+          </Text> */}
         </View>
 
         {/* 1. Identifiers */}
         <View className="mb-7 px-6">
-          <Text className="text-lg font-semibold text-slate-900 mb-3">Details</Text>
+          {/* Switched to high-contrast light text */}
+          <Text className="text-lg font-semibold text-dark mb-3">Details</Text>
           <View className="mb-3">
-            <Text className="text-xs text-slate-500 mb-1.5">Name / Entity</Text>
+            {/* Switched to secondary light text */}
+            <Text className="text-xs text-dark-100 mb-1.5">Name / Entity</Text>
             <TextInput
-              className="h-10 border border-slate-200 rounded-md px-3 bg-slate-50 text-sm text-slate-900"
+              // Switched input background to card, border to primary-dark, text to high-contrast light
+              className="h-10 border border-secondary-200 rounded-md px-3 bg-card text-sm text-dark"
               value={formData.name}
-              onChangeText={(t) => handleChange('name', t)}
+              onChangeText={(t) => handleChange("name", t)}
               placeholder="e.g. Home"
-              placeholderTextColor="#cbd5e1"
+              placeholderTextColor="#86EFAC" // Subtle neutral
             />
           </View>
           <View className="mb-3">
-            <Text className="text-xs text-slate-500 mb-1.5">Address</Text>
+            {/* Switched to secondary light text */}
+            <Text className="text-xs text-dark-100 mb-1.5">Address</Text>
             <TextInput
-              className="h-10 border border-slate-200 rounded-md px-3 bg-slate-50 text-sm text-slate-900"
+              // Switched input background to card, border to primary-dark, text to high-contrast light
+              className="h-10 border border-secondary-200 rounded-md px-3 bg-card text-sm text-dark"
               value={formData.address}
-              onChangeText={(t) => handleChange('address', t)}
+              onChangeText={(t) => handleChange("address", t)}
               placeholder="City, State"
-              placeholderTextColor="#cbd5e1"
+              placeholderTextColor="#86EFAC" // Subtle neutral
             />
           </View>
         </View>
 
         {/* 2. Domestic Energy */}
         <View className="mb-7 px-6">
-          <Text className="text-lg font-semibold text-slate-900 mb-3">Domestic Energy</Text>
-          
-          <CheckboxRow 
-            label="Grid Electricity" 
-            fieldsToCheck={['gridElectricity']} 
+          {/* Switched to high-contrast light text */}
+          <Text className="text-lg font-semibold text-dark mb-3">
+            Domestic Energy
+          </Text>
+
+          <CheckboxRow
+            label="Grid Electricity"
+            fieldsToCheck={["gridElectricity"]}
             isVisible={!!visibleFields.gridElectricity}
-            onToggle={() => toggleVisibility(['gridElectricity'])}
-            color="#fb923c" 
+            onToggle={() => toggleVisibility(["gridElectricity"])}
+            color="#fb923c" // Orange (Warning) maintained for a visual category cue
           />
-          <InputField 
-            label="Consumption (kWh)" 
+          <InputField
+            label="Consumption (kWh)"
             value={formData.gridElectricity}
-            onChange={(t) => handleChange('gridElectricity', t)}
+            onChange={(t) => handleChange("gridElectricity", t)}
             isVisible={!!visibleFields.gridElectricity}
-            placeholder="0" 
+            placeholder="0"
           />
 
-          <CheckboxRow 
-            label="Piped Gas (PNG)" 
-            fieldsToCheck={['gasPNG']} 
+          <CheckboxRow
+            label="Piped Gas (PNG)"
+            fieldsToCheck={["gasPNG"]}
             isVisible={!!visibleFields.gasPNG}
-            onToggle={() => toggleVisibility(['gasPNG'])}
-            color="#fb923c" 
+            onToggle={() => toggleVisibility(["gasPNG"])}
+            color="#fb923c" // Orange (Warning) maintained
           />
-          <InputField 
-            label="Consumption (SCM)" 
+          <InputField
+            label="Consumption (SCM)"
             value={formData.gasPNG}
-            onChange={(t) => handleChange('gasPNG', t)}
+            onChange={(t) => handleChange("gasPNG", t)}
             isVisible={!!visibleFields.gasPNG}
-            placeholder="0" 
+            placeholder="0"
           />
 
-          <CheckboxRow 
-            label="CNG Cylinder" 
-            fieldsToCheck={['cngCylinder']} 
+          <CheckboxRow
+            label="CNG Cylinder"
+            fieldsToCheck={["cngCylinder"]}
             isVisible={!!visibleFields.cngCylinder}
-            onToggle={() => toggleVisibility(['cngCylinder'])}
-            color="#fb923c" 
+            onToggle={() => toggleVisibility(["cngCylinder"])}
+            color="#fb923c" // Orange (Warning) maintained
           />
-          <InputField 
-            label="Weight (kg)" 
+          <InputField
+            label="Weight (kg)"
             value={formData.cngCylinder}
-            onChange={(t) => handleChange('cngCylinder', t)}
+            onChange={(t) => handleChange("cngCylinder", t)}
             isVisible={!!visibleFields.cngCylinder}
-            placeholder="0" 
+            placeholder="0"
           />
         </View>
 
         {/* 3. Transport */}
         <View className="mb-7 px-6">
-          <Text className="text-lg font-semibold text-slate-900 mb-3">Transport</Text>
+          {/* Switched to high-contrast light text */}
+          <Text className="text-lg font-semibold text-dark mb-3">
+            Transport
+          </Text>
 
-          <CheckboxRow 
-            label="Petrol Vehicle" 
-            fieldsToCheck={['petrol']} 
+          <CheckboxRow
+            label="Petrol Vehicle"
+            fieldsToCheck={["petrol"]}
             isVisible={!!visibleFields.petrol}
-            onToggle={() => toggleVisibility(['petrol'])}
-            color="#3b82f6" 
+            onToggle={() => toggleVisibility(["petrol"])}
+            color="#3b82f6" // Blue (Info) maintained for a visual category cue
           />
-          <InputField 
-            label="Fuel Used (Liters)" 
+          <InputField
+            label="Fuel Used (Liters)"
             value={formData.petrol}
-            onChange={(t) => handleChange('petrol', t)}
+            onChange={(t) => handleChange("petrol", t)}
             isVisible={!!visibleFields.petrol}
-            placeholder="0" 
+            placeholder="0"
           />
 
-          <CheckboxRow 
-            label="Diesel Vehicle" 
-            fieldsToCheck={['diesel']} 
+          <CheckboxRow
+            label="Diesel Vehicle"
+            fieldsToCheck={["diesel"]}
             isVisible={!!visibleFields.diesel}
-            onToggle={() => toggleVisibility(['diesel'])}
-            color="#3b82f6" 
+            onToggle={() => toggleVisibility(["diesel"])}
+            color="#3b82f6" // Blue (Info) maintained
           />
-          <InputField 
-            label="Fuel Used (Liters)" 
+          <InputField
+            label="Fuel Used (Liters)"
             value={formData.diesel}
-            onChange={(t) => handleChange('diesel', t)}
+            onChange={(t) => handleChange("diesel", t)}
             isVisible={!!visibleFields.diesel}
-            placeholder="0" 
+            placeholder="0"
           />
 
-          <CheckboxRow 
-            label="CNG Vehicle" 
-            fieldsToCheck={['cng']} 
+          <CheckboxRow
+            label="CNG Vehicle"
+            fieldsToCheck={["cng"]}
             isVisible={!!visibleFields.cng}
-            onToggle={() => toggleVisibility(['cng'])}
-            color="#3b82f6" 
+            onToggle={() => toggleVisibility(["cng"])}
+            color="#3b82f6" // Blue (Info) maintained
           />
-          <InputField 
-            label="Fuel Used (kg)" 
+          <InputField
+            label="Fuel Used (kg)"
             value={formData.cng}
-            onChange={(t) => handleChange('cng', t)}
+            onChange={(t) => handleChange("cng", t)}
             isVisible={!!visibleFields.cng}
-            placeholder="0" 
+            placeholder="0"
           />
         </View>
 
         {/* 4. Green Assets */}
         <View className="mb-7 px-6">
-          <Text className="text-lg font-semibold text-slate-900 mb-3">Green Assets</Text>
+          {/* Switched to high-contrast light text */}
+          <Text className="text-lg font-semibold text-dark mb-3">
+            Green Assets
+          </Text>
 
-          <CheckboxRow 
-            label="Solar Installation" 
-            fieldsToCheck={['solarPanels', 'solarCapacity']} 
+          <CheckboxRow
+            label="Solar Installation"
+            fieldsToCheck={["solarPanels", "solarCapacity"]}
             isVisible={!!visibleFields.solarPanels}
-            onToggle={() => toggleVisibility(['solarPanels', 'solarCapacity'])}
-            color="#4EA89A" 
+            onToggle={() => toggleVisibility(["solarPanels", "solarCapacity"])}
+            color="#22C55E" // Primary Accent (Secondary-DEFAULT) maintained for a visual category cue
           />
-          <InputField 
-            label="Number of Panels" 
+          <InputField
+            label="Number of Panels"
             value={formData.solarPanels}
-            onChange={(t) => handleChange('solarPanels', t)}
+            onChange={(t) => handleChange("solarPanels", t)}
             isVisible={!!visibleFields.solarPanels}
-            placeholder="Qty" 
+            placeholder="Qty"
           />
-          <InputField 
-            label="System Capacity (kW)" 
+          <InputField
+            label="System Capacity (kW)"
             value={formData.solarCapacity}
-            onChange={(t) => handleChange('solarCapacity', t)}
+            onChange={(t) => handleChange("solarCapacity", t)}
             isVisible={!!visibleFields.solarCapacity}
-            placeholder="kW" 
+            placeholder="kW"
           />
 
-          <CheckboxRow 
-            label="Trees Planted" 
-            fieldsToCheck={['treeCount']} 
+          <CheckboxRow
+            label="Trees Planted"
+            fieldsToCheck={["treeCount"]}
             isVisible={!!visibleFields.treeCount}
-            onToggle={() => toggleVisibility(['treeCount'])}
-            color="#4EA89A" 
+            onToggle={() => toggleVisibility(["treeCount"])}
+            color="#22C55E" // Primary Accent (Secondary-DEFAULT) maintained
           />
-          <InputField 
-            label="Count" 
+          <InputField
+            label="Count"
             value={formData.treeCount}
-            onChange={(t) => handleChange('treeCount', t)}
+            onChange={(t) => handleChange("treeCount", t)}
             isVisible={!!visibleFields.treeCount}
-            placeholder="0" 
+            placeholder="0"
           />
         </View>
 
         {/* Action Area */}
-        <View className="mt-3 items-end px-6">
-          <TouchableOpacity 
-            className="bg-[#4EA89A] h-10 px-5 rounded-md justify-center items-center shadow-sm shadow-black/20 elevation-2"
+        <View className=" items-center px-6">
+          <TouchableOpacity
+            className="w-full bg-green-500 py-3 px-[22px] rounded-full mt-4 shadow-lg shadow-secondary/20 h-14 items-center justify-center flex-row gap-2"
             onPress={handleSubmit}
             activeOpacity={0.8}
           >
-            <Text className="text-white text-sm font-semibold">Calculate Impact</Text>
+            <Text className="text-black text-lg font-semibold tracking-wide">
+              Calculate Impact
+            </Text>
           </TouchableOpacity>
         </View>
-
       </ScrollView>
     </SafeAreaView>
   );

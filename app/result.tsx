@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons"; // Added Icon Library
 
 // --- CONSTANTS ---
 const GRID_EF = 1.02;
@@ -11,11 +12,19 @@ const SOLAR_PER_KWP = 120 * 1.02;
 const TREE_PER_TREE = 5.0;
 
 // --- HELPER COMPONENT FOR ROWS ---
-const ResultRow = ({ label, value, unit, impact, colorClass }: any) => (
-  <View className="flex-row justify-between items-center py-1.5 border-b border-slate-100/50 last:border-0">
-    <View>
-      <Text className={`text-sm font-medium ${colorClass} opacity-90`}>{label}</Text>
-      <Text className={`text-xs ${colorClass} opacity-60`}>{value} {unit}</Text>
+const ResultRow = ({ label, value, unit, impact, colorClass, iconName }: any) => (
+  <View className="flex-row justify-between items-center py-2.5 border-b border-white/5 last:border-0">
+    <View className="flex-row items-center gap-3">
+       {/* Added Icon Support */}
+      {iconName && (
+        <View className="w-8 h-8 rounded-full bg-white/5 items-center justify-center">
+            <Ionicons name={iconName} size={14} color={colorClass ? "#ef4444" : "#22c55e"} style={{ opacity: 0.8 }} />
+        </View>
+      )}
+      <View>
+        <Text className="text-sm font-medium text-dark opacity-90">{label}</Text>
+        <Text className="text-xs text-dark-100 opacity-60">{value} {unit}</Text>
+      </View>
     </View>
     <Text className={`text-base font-bold ${colorClass}`}>
       {impact > 0 ? "+" : ""}{Math.round(impact)}
@@ -28,7 +37,7 @@ export default function Result() {
   const urlParams = useLocalSearchParams();
 
   // --- DUMMY DATA CONFIGURATION ---
-  const TEST_MODE = false; // Set to FALSE when you want to use real form data
+  const TEST_MODE = true; // Set to FALSE when you want to use real form data
   
   const dummyData = {
     name: "Sample Villa",
@@ -75,41 +84,48 @@ export default function Result() {
   const needTrees = net > 0 ? Math.ceil(net / TREE_PER_TREE) : 0;
 
   return (
-    <View className="flex-1 bg-white">
+    <View className="flex-1 bg-primary"> 
+      {/* Changed bg-white to bg-primary (Dark Background) */}
       
       {/* --- HEADER --- */}
-      <View className="bg-[#F2F9F8] pt-[60px] px-6 pb-8 rounded-b-[32px] mb-6 shadow-sm shadow-slate-200">
+      {/* Changed bg-[#F2F9F8] to bg-card (Dark Surface) */}
+      <View className="bg-card pt-[60px] px-6 pb-8 rounded-b-[32px] shadow-sm shadow-black/50">
         <TouchableOpacity
           onPress={() => router.back()}
-          className="w-11 h-11 rounded-full bg-[#4EA89A] items-center justify-center mb-6 shadow-md shadow-[#4EA89A]/40 elevation-4"
+          // Changed bg-[#4EA89A] to bg-secondary-200 (Darker Teal)
+          className="w-11 h-11 rounded-full bg-card border border-secondary-200 items-center justify-center mb-6 shadow-md shadow-secondary/20 elevation-4"
           activeOpacity={0.8}
         >
-          <Text className="text-white text-2xl font-bold">←</Text>
+          {/* Replaced Text Arrow with Ionicons */}
+          <Ionicons name="arrow-back" size={24} color="#EAFDF4" />
         </TouchableOpacity>
 
-        <Text className="text-[28px] font-extrabold text-slate-800 mb-2 -tracking-[0.5px]">
+        {/* Text colors updated to theme */}
+        <Text className="text-[28px] font-extrabold text-dark mb-2 -tracking-[0.5px]">
           Calculation Result
         </Text>
-        <Text className="text-[15px] text-slate-500 leading-[22px]">
+        <Text className="text-[15px] text-dark-100 leading-[22px]">
           Here is your carbon footprint summary for
           {"\n"}
-          <Text className="font-semibold text-[#2D665B]">{name}</Text>
+          <Text className="font-semibold text-secondary">{name}</Text>
           {TEST_MODE && <Text className="text-red-400 text-xs font-bold"> (PREVIEW MODE)</Text>}
         </Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 60 }} className="px-6" showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 60 }} className="px-6 pt-6" showsVerticalScrollIndicator={false}>
         
         {/* --- NET RESULT CARD --- */}
-        <View className="bg-white rounded-3xl p-6 mb-6 shadow-lg shadow-slate-200 border border-slate-100 items-center">
-          <Text className="text-slate-500 text-sm font-semibold uppercase tracking-widest mb-2">Net Carbon Footprint</Text>
-          <Text className="text-[64px] leading-[70px] font-black text-[#4EA89A]">
+        {/* Changed bg-white to bg-card, updated border and shadow */}
+        <View className="bg-card rounded-3xl p-6 mb-6 shadow-lg shadow-black/50 border border-white/5 items-center">
+          <Text className="text-dark-100 text-sm font-semibold uppercase tracking-widest mb-2 opacity-70">Net Carbon Footprint</Text>
+          {/* Updated text color to secondary */}
+          <Text className="text-[64px] leading-[70px] font-black text-secondary">
             {net > 0 ? Math.round(net) : 0}
           </Text>
-          <Text className="text-2xl text-[#4EA89A] font-bold opacity-80">kg CO₂e</Text>
+          <Text className="text-2xl text-secondary font-bold opacity-80">kg CO₂e</Text>
           {net <= 0 && (
-            <View className="mt-4 px-6 py-2 bg-[#4EA89A] rounded-full shadow-sm">
-              <Text className="text-white font-bold text-xs uppercase tracking-widest">
+            <View className="mt-4 px-6 py-2 bg-secondary rounded-full shadow-sm">
+              <Text className="text-black font-bold text-xs uppercase tracking-widest">
                 Carbon Neutral
               </Text>
             </View>
@@ -120,60 +136,62 @@ export default function Result() {
         <View className="space-y-4 mb-8">
           
           {/* 1. Gross Emissions Card */}
-          <View className="bg-red-50 rounded-2xl p-5 border border-red-100/60 mb-2">
+          {/* Darkened background (red-900/10) and borders */}
+          <View className="bg-red-900/10 rounded-2xl p-5 border border-red-500/20 mb-2">
             <View className="flex-row items-center mb-4">
-              <View className="w-2 h-2 rounded-full bg-red-500 mr-2" />
-              <Text className="text-red-900 font-bold uppercase text-xs tracking-wider">Total Emissions</Text>
+              <View className="w-2 h-2 rounded-full bg-red-500 mr-2 shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
+              <Text className="text-red-400 font-bold uppercase text-xs tracking-wider">Total Emissions</Text>
             </View>
             
             {/* Input Rows */}
-            <View className="space-y-2 mb-4">
-              {electricity > 0 && <ResultRow label="Electricity" value={electricity} unit="kWh" impact={val_elec} colorClass="text-red-800" />}
-              {gasPNG > 0      && <ResultRow label="Piped Gas" value={gasPNG} unit="SCM" impact={val_gas} colorClass="text-red-800" />}
-              {cngCyl > 0      && <ResultRow label="CNG Cyl" value={cngCyl} unit="kg" impact={val_cyl} colorClass="text-red-800" />}
-              {petrol > 0      && <ResultRow label="Petrol" value={petrol} unit="L" impact={val_petrol} colorClass="text-red-800" />}
-              {diesel > 0      && <ResultRow label="Diesel" value={diesel} unit="L" impact={val_diesel} colorClass="text-red-800" />}
-              {cng > 0         && <ResultRow label="CNG Vehicle" value={cng} unit="kg" impact={val_cng} colorClass="text-red-800" />}
+            <View className="space-y-1 mb-4">
+              {electricity > 0 && <ResultRow label="Electricity" value={electricity} unit="kWh" impact={val_elec} colorClass="text-red-400" iconName="flash-outline" />}
+              {gasPNG > 0      && <ResultRow label="Piped Gas" value={gasPNG} unit="SCM" impact={val_gas} colorClass="text-red-400" iconName="flame-outline" />}
+              {cngCyl > 0      && <ResultRow label="CNG Cyl" value={cngCyl} unit="kg" impact={val_cyl} colorClass="text-red-400" iconName="cube-outline" />}
+              {petrol > 0      && <ResultRow label="Petrol" value={petrol} unit="L" impact={val_petrol} colorClass="text-red-400" iconName="car-sport-outline" />}
+              {diesel > 0      && <ResultRow label="Diesel" value={diesel} unit="L" impact={val_diesel} colorClass="text-red-400" iconName="bus-outline" />}
+              {cng > 0         && <ResultRow label="CNG Vehicle" value={cng} unit="kg" impact={val_cng} colorClass="text-red-400" iconName="car-outline" />}
             </View>
 
             {/* Total Line */}
-            <View className="border-t border-red-200 pt-3 flex-row justify-between items-baseline">
-              <Text className="text-red-900 font-bold text-sm">Gross Total</Text>
-              <Text className="text-3xl font-extrabold text-red-600">{Math.round(gross)} <Text className="text-sm font-medium opacity-70">kg</Text></Text>
+            <View className="border-t border-red-500/20 pt-3 flex-row justify-between items-baseline">
+              <Text className="text-red-200 font-bold text-sm">Gross Total</Text>
+              <Text className="text-3xl font-extrabold text-red-400">{Math.round(gross)} <Text className="text-sm font-medium opacity-70">kg</Text></Text>
             </View>
           </View>
 
-          {/* 2. Solar Offset Card (Only if applicable) */}
+          {/* 2. Solar Offset Card */}
           {(solarKwp > 0) && (
-            <View className="bg-green-50 rounded-2xl p-5 border border-green-100/60 mb-2">
+            // Darkened background (green-900/10)
+            <View className="bg-green-900/10 rounded-2xl p-5 border border-green-500/20 mb-2">
               <View className="flex-row items-center mb-4">
-                <View className="w-2 h-2 rounded-full bg-green-500 mr-2" />
-                <Text className="text-green-900 font-bold uppercase text-xs tracking-wider">Solar Savings</Text>
+                <View className="w-2 h-2 rounded-full bg-green-500 mr-2 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+                <Text className="text-green-400 font-bold uppercase text-xs tracking-wider">Solar Savings</Text>
               </View>
               
-              <ResultRow label="Solar Capacity" value={solarKwp} unit="kWp" impact={-solarOffset} colorClass="text-green-800" />
-              {solarPanels > 0 && <Text className="text-[10px] text-green-800 opacity-60 ml-0.5 -mt-1.5 mb-2">({solarPanels} Panels Installed)</Text>}
+              <ResultRow label="Solar Capacity" value={solarPanels} unit="panels" impact={-solarOffset} colorClass="text-green-400" iconName="sunny-outline" />
 
-              <View className="border-t border-green-200 pt-3 flex-row justify-between items-baseline">
-                <Text className="text-green-900 font-bold text-sm">Offset</Text>
-                <Text className="text-3xl font-extrabold text-green-600">−{Math.round(solarOffset)} <Text className="text-sm font-medium opacity-70">kg</Text></Text>
+              <View className="border-t border-green-500/20 pt-3 flex-row justify-between items-baseline">
+                <Text className="text-green-200 font-bold text-sm">Offset</Text>
+                <Text className="text-3xl font-extrabold text-green-400">−{Math.round(solarOffset)} <Text className="text-sm font-medium opacity-70">kg</Text></Text>
               </View>
             </View>
           )}
 
-          {/* 3. Tree Offset Card (Only if applicable) */}
+          {/* 3. Tree Offset Card */}
           {(trees > 0) && (
-            <View className="bg-emerald-50 rounded-2xl p-5 border border-emerald-100/60 mb-2">
+            // Darkened background (emerald-900/10)
+            <View className="bg-emerald-900/10 rounded-2xl p-5 border border-emerald-500/20 mb-2">
               <View className="flex-row items-center mb-4">
-                <View className="w-2 h-2 rounded-full bg-emerald-500 mr-2" />
-                <Text className="text-emerald-900 font-bold uppercase text-xs tracking-wider">Nature Savings</Text>
+                <View className="w-2 h-2 rounded-full bg-emerald-500 mr-2 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+                <Text className="text-emerald-400 font-bold uppercase text-xs tracking-wider">Nature Savings</Text>
               </View>
               
-              <ResultRow label="Trees Planted" value={trees} unit="Nos" impact={-treeOffset} colorClass="text-emerald-800" />
+              <ResultRow label="Trees Planted" value={trees} unit="Nos" impact={-treeOffset} colorClass="text-emerald-400" iconName="leaf-outline" />
 
-              <View className="border-t border-emerald-200 pt-3 flex-row justify-between items-baseline">
-                <Text className="text-emerald-900 font-bold text-sm">Offset</Text>
-                <Text className="text-3xl font-extrabold text-emerald-600">−{Math.round(treeOffset)} <Text className="text-sm font-medium opacity-70">kg</Text></Text>
+              <View className="border-t border-emerald-500/20 pt-3 flex-row justify-between items-baseline">
+                <Text className="text-emerald-200 font-bold text-sm">Offset</Text>
+                <Text className="text-3xl font-extrabold text-emerald-400">−{Math.round(treeOffset)} <Text className="text-sm font-medium opacity-70">kg</Text></Text>
               </View>
             </View>
           )}
@@ -182,26 +200,32 @@ export default function Result() {
 
         {/* --- SUGGESTIONS --- */}
         {net > 0 && (
-          <View className="bg-slate-50 rounded-2xl p-6 border border-slate-200 mb-6">
-            <Text className="text-lg font-bold text-center text-slate-800 mb-6">Path to Carbon Neutrality</Text>
+          // Changed bg-slate-50 to bg-card, border to white/10
+          <View className="bg-card rounded-2xl p-6 border border-white/10 mb-6 shadow-lg shadow-black/40">
+            <Text className="text-lg font-bold text-center text-dark mb-6">Path to Carbon Neutrality</Text>
             
             <View className="flex-row justify-between items-center px-2">
               <View className="items-center flex-1">
-                <View className="w-12 h-12 bg-blue-100 rounded-full items-center justify-center mb-2">
-                   <Text className="text-2xl">☀️</Text>
+                {/* Updated Icon Container */}
+                <View className="w-12 h-12 bg-blue-500/10 rounded-full items-center justify-center mb-2 border border-blue-500/20">
+                   {/* Replaced Emoji with Icon */}
+                   <Ionicons name="sunny" size={24} color="#3b82f6" />
                 </View>
-                <Text className="text-3xl font-extrabold text-blue-600 mb-1">{needSolar}</Text>
-                <Text className="text-xs font-bold text-slate-500 uppercase tracking-wider text-center">kW Solar Needed</Text>
+                <Text className="text-3xl font-extrabold text-blue-400 mb-1">{needSolar}</Text>
+                <Text className="text-xs font-bold text-dark-100 opacity-60 uppercase tracking-wider text-center">kW Solar Needed</Text>
               </View>
               
-              <View className="h-16 w-[1px] bg-slate-200 mx-2" />
+              {/* Divider Color Update */}
+              <View className="h-16 w-[1px] bg-white/10 mx-2" />
               
               <View className="items-center flex-1">
-                <View className="w-12 h-12 bg-green-100 rounded-full items-center justify-center mb-2">
-                   <Text className="text-2xl">🌳</Text>
+                {/* Updated Icon Container */}
+                <View className="w-12 h-12 bg-green-500/10 rounded-full items-center justify-center mb-2 border border-green-500/20">
+                   {/* Replaced Emoji with Icon */}
+                   <Ionicons name="leaf" size={24} color="#22c55e" />
                 </View>
-                <Text className="text-3xl font-extrabold text-green-600 mb-1">{needTrees}</Text>
-                <Text className="text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Trees Needed</Text>
+                <Text className="text-3xl font-extrabold text-green-400 mb-1">{needTrees}</Text>
+                <Text className="text-xs font-bold text-dark-100 opacity-60 uppercase tracking-wider text-center">Trees Needed</Text>
               </View>
             </View>
           </View>

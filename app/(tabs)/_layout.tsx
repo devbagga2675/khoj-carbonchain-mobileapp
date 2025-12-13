@@ -7,7 +7,7 @@ import { images } from "@/constants/images"; // Ensure you have a highlighted bg
 const TabIcon = ({ icon, focused }: any) => {
   // Simplified icon for now
   return (
-    <View className={`items-center justify-center ${focused ? 'bg-white/10 rounded-full p-2' : ''}`}>
+    <View className={`items-center justify-center h-12 w-12 ${focused ? 'bg-white/10 rounded-full p-2' : ''}`}>
       <Image 
         source={icon} 
         tintColor={focused ? "#ffffff" : "#A8B5DB"} 
@@ -24,9 +24,9 @@ export default function TabLayout() {
       screenOptions={{
         tabBarShowLabel: false,
         tabBarStyle: {
-          backgroundColor: '#0f0d23',
+          backgroundColor: '#121E18',
           borderTopWidth: 0,
-          height: 60,
+          paddingTop: 8,
           elevation: 0,
         }
       }}

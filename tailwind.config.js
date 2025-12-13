@@ -5,27 +5,27 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // BACKGROUND: Soft Off-White
-        primary: "#F9FAFB", 
+        // BACKGROUND: Now the deep dark background
+        primary: "#040D07", 
 
-        // CARDS/SURFACES: Pure White
-        card: "#FFFFFF",
+        // CARDS/SURFACES: Slightly lighter dark surface for card separation
+        card: "#121E18",
 
-        // BRAND: Your "Eco-Teal" (Unchanged)
+        // BRAND: The core green accent colors
         secondary: {
-          DEFAULT: "#4EA89A", 
-          100: "#E0F2F1",     // Very light teal for backgrounds
-          200: "#2D665B",     // Darker teal for text/borders
+          DEFAULT: "#22C55E",    // Core Primary/Accent Green (replaces old #4EA89A)
+          100: "#4EA89A",        // Primary Light (from your button style, for lighter tints/gradients)
+          200: "#2D665B",        // Primary Dark (from your button style, for dark borders/shadows)
         },
 
-        // TEXT: Dark Gray for readability on light bg
+        // TEXT/NEUTRAL: Light colors for readability on dark background
         dark: {
-          DEFAULT: "#1F2937", // Main Text
-          100: "#4B5563",     // Secondary Text
-          200: "#9CA3AF",     // Placeholders
+          DEFAULT: "#EAFDF4",    // High-Contrast Text (replaces old #1F2937)
+          100: "#D1FADF",        // Secondary Text/Description (replaces old #4B5563)
+          200: "#000000",        // Pure Black (For text on the bright secondary buttons/surfaces)
         },
         
-        // Status Colors
+        // Status Colors (Retained the standard values)
         danger: "#EF4444",
         success: "#22C55E",
         warning: "#F59E0B",
