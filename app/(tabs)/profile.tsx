@@ -8,12 +8,14 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
+import { useRouter } from "expo-router";
 
 
-  //  1. DUMMY PROFILE + HISTORY (TEMPORARY)
-  //  Replace this later with real API responses.
+//  Dummy login state (replace with Firebase later)
+const userLoggedIn = true; // change to false to test unauthenticated UI
 
 
+// ------------------ DUMMY PROFILE ------------------
 const DUMMY_PROFILE = {
   name: "John Doe",
   email: "john@example.com",
@@ -23,7 +25,8 @@ const DUMMY_PROFILE = {
     "https://i.pinimg.com/736x/6f/7b/ed/6f7bed633cace91ac7c1d2e95dd91ee5.jpg",
 };
 
-// 10 dummy history entries — API can return same structure
+
+// ------------------ DUMMY HISTORY ------------------
 const DUMMY_HISTORY = [
   {
     id: 1,
@@ -86,8 +89,7 @@ const DUMMY_HISTORY = [
 ];
 
 
-  //  A simple ResultRow component
-
+// ------------------ ResultRow Component ------------------
 interface ResultRowProps {
   label: string;
   value: number;
@@ -107,10 +109,10 @@ const ResultRow: React.FC<ResultRowProps> = ({ label, value, unit, impact }) => 
 };
 
 
-  //  MAIN PROFILE SCREEN
-
-
+// ------------------ MAIN PROFILE SCREEN ------------------
 const Profile = () => {
+  const router = useRouter();
+
   const [profile, setProfile] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,70 +121,78 @@ const Profile = () => {
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   useEffect(() => {
-    fetchProfile();
-    fetchHistory();
+    if (userLoggedIn) {
+      setProfile(DUMMY_PROFILE);
+      setHistory(DUMMY_HISTORY);
+    }
+    setLoading(false);
   }, []);
-
-
-    //  2. FETCH PROFILE (dummy now, API later)
-
-  const fetchProfile = async () => {
-    try {
-      // ⭐ Replace with your real API later
-      // const res = await fetch("https://your-api.com/profile");
-      // const data = await res.json();
-
-      const data = DUMMY_PROFILE; // ← TEMP
-      setProfile(data);
-      setLoading(false);
-    } catch (err) {
-      console.log("Profile fetch error:", err);
-      setLoading(false);
-    }
-  };
-
-    //  3. FETCH HISTORY (dummy now, API later)
-  const fetchHistory = async () => {
-    try {
-      // ⭐ Replace with your real API later
-      // const res = await fetch("https://your-api.com/history");
-      // const data = await res.json();
-
-      const data = DUMMY_HISTORY; // ← TEMP
-      setHistory(data);
-    } catch (err) {
-      console.log("History fetch error:", err);
-    }
-  };
-
-
-    //  Expand/Collapse history item
 
   const toggleExpand = (id: number) => {
     setExpandedId(expandedId === id ? null : id);
   };
 
-  if (loading)
+
+  // ------------------ NOT LOGGED IN UI ------------------
+  if (!userLoggedIn) {
+    return (
+      <View style={[styles.container, { justifyContent: "center" }]}>
+
+        <View style={styles.authCard}>
+          <Text style={styles.authTitle}>Welcome</Text>
+          <Text style={{ color: "#666", marginBottom: 20 }}>
+            Please login or create an account
+          </Text>
+
+          <TouchableOpacity
+            style={styles.authButton}
+            onPress={() => router.push("/auth/login")}
+          >
+            <Text style={styles.authButtonText}>Login</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.authButton, styles.authSecondaryButton]}
+            onPress={() => router.push("/auth/register")}
+          >
+            <Text style={styles.authButtonText}>Register</Text>
+          </TouchableOpacity>
+        </View>
+
+      </View>
+    );
+  }
+
+
+  // ------------------ LOADING ------------------
+  if (loading) {
     return (
       <View style={styles.loader}>
         <ActivityIndicator size="large" />
       </View>
     );
+  }
 
+
+  // ------------------ LOGGED IN UI ------------------
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
-      {/* ---------------- PROFILE TOP ---------------- */}
+
+      {/* PROFILE TOP */}
       <View style={styles.topSection}>
         <Image source={{ uri: profile.profileImage }} style={styles.avatar} />
         <Text style={styles.name}>{profile.name}</Text>
         <Text style={styles.email}>{profile.email}</Text>
 
-        <TouchableOpacity style={styles.editButton}>
-          <Text style={styles.editButtonText}>Edit profile</Text>
-        </TouchableOpacity>
+        {/* 🔥 Edit Profile only visible when logged in */}
+        {userLoggedIn && (
+          <TouchableOpacity style={styles.editButton}>
+            <Text style={styles.editButtonText}>Edit profile</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* ---------------- DETAILS CARD ---------------- */}
+      {/* DETAILS CARD */}
       <View style={styles.card}>
         <View style={styles.row}>
           <Text style={styles.label}>Phone</Text>
@@ -198,96 +208,56 @@ const Profile = () => {
 
         <View style={styles.divider} />
 
-        {/* HISTORY DROPDOWN BUTTON */}
+        {/* HISTORY */}
         <TouchableOpacity style={styles.row} onPress={() => setShowHistory(!showHistory)}>
           <Text style={styles.label}>View History</Text>
           <Text style={styles.arrow}>{showHistory ? "▲" : "▶"}</Text>
         </TouchableOpacity>
 
-        {/* ---------------- HISTORY LIST ---------------- */}
         {showHistory && (
-  <View style={{ marginTop: 12 }}>
-    {history.map((item) => (
-      <View key={item.id} style={styles.historyContainer}>
-        
-        {/* HISTORY TITLE ROW */}
-        <TouchableOpacity
-          onPress={() => toggleExpand(item.id)}
-          style={styles.historyRow}
-        >
-          <Text style={styles.historyTitle}>• {item.title}</Text>
-          <Text style={styles.dropdownIcon}>
-            {expandedId === item.id ? "▲" : "▼"}
-          </Text>
-        </TouchableOpacity>
+          <View style={{ marginTop: 12 }}>
+            {history.map((item) => (
+              <View key={item.id} style={styles.historyContainer}>
+                
+                <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.historyRow}>
+                  <Text style={styles.historyTitle}>• {item.title}</Text>
+                  <Text style={styles.dropdownIcon}>
+                    {expandedId === item.id ? "▲" : "▼"}
+                  </Text>
+                </TouchableOpacity>
 
-        {/* EXPANDED RESULT BOX */}
-        {expandedId === item.id && (
-          <View style={styles.expandedBox}>
-            <Text style={styles.sectionTitle}>Total Emissions</Text>
+                {expandedId === item.id && (
+                  <View style={styles.expandedBox}>
+                    <Text style={styles.sectionTitle}>Total Emissions</Text>
 
-            {item.inputs.electricity > 0 && (
-              <ResultRow
-                label="Electricity"
-                value={item.inputs.electricity}
-                unit="kWh"
-                impact={item.results.val_elec}
-              />
-            )}
+                    {item.inputs.electricity > 0 && (
+                      <ResultRow
+                        label="Electricity"
+                        value={item.inputs.electricity}
+                        unit="kWh"
+                        impact={item.results.val_elec}
+                      />
+                    )}
 
-            {item.inputs.gasPNG > 0 && (
-              <ResultRow
-                label="Piped Gas"
-                value={item.inputs.gasPNG}
-                unit="SCM"
-                impact={item.results.val_gas}
-              />
-            )}
+                    <Text style={styles.totalLine}>
+                      Gross Total: {item.results.gross} kg
+                    </Text>
 
-            <Text style={styles.totalLine}>
-              Gross Total: {item.results.gross} kg
-            </Text>
-
-            {/* SOLAR */}
-            {item.inputs.solarKwp > 0 && (
-              <View style={{ marginTop: 10 }}>
-                <Text style={styles.sectionTitle}>Solar Savings</Text>
-                <ResultRow
-                  label="Solar Capacity"
-                  value={item.inputs.solarKwp}
-                  unit="kWp"
-                  impact={-item.results.solarOffset}
-                />
-                <Text>Offset: -{item.results.solarOffset} kg</Text>
+                  </View>
+                )}
               </View>
-            )}
-
-            {/* TREES */}
-            {item.inputs.trees > 0 && (
-              <View style={{ marginTop: 10 }}>
-                <Text style={styles.sectionTitle}>Nature Savings</Text>
-                <ResultRow
-                  label="Trees Planted"
-                  value={item.inputs.trees}
-                  unit="Nos"
-                  impact={-item.results.treeOffset}
-                />
-                <Text>Offset: -{item.results.treeOffset} kg</Text>
-              </View>
-            )}
+            ))}
           </View>
         )}
       </View>
-    ))}
-  </View>
-)}
 
-      </View>
+      {/* LOGOUT BUTTON */}
+      {userLoggedIn && (
+        <TouchableOpacity style={styles.logoutButton}>
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+      )}
 
-      {/* ---------------- LOGOUT ---------------- */}
-      <TouchableOpacity style={styles.logoutButton}>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 };
@@ -296,17 +266,14 @@ export default Profile;
 
 
 
-
-
-  //  STYLES
-
-
+// ------------------ STYLES ------------------
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     paddingTop: 40,
     paddingBottom: 60,
     alignItems: "center",
-    backgroundColor: "#F7F7F7",
+    backgroundColor: "#040D07", 
   },
 
   loader: { flex: 1, justifyContent: "center", alignItems: "center" },
@@ -318,27 +285,30 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 2,
-    borderColor: "#e5e5e5",
+    borderColor: "#2D665B", 
   },
 
-  name: { fontSize: 22, fontWeight: "700", marginTop: 10 },
-  email: { fontSize: 14, color: "#777", marginBottom: 10 },
+  name: { fontSize: 22, fontWeight: "700", marginTop: 10, color: "#EAFDF4" },
+  email: { fontSize: 14, color: "#D1FADF", marginBottom: 10 },
 
   editButton: {
-    backgroundColor: "black",
+    borderColor: "#22C55E",
+    borderWidth: 1.5,
     paddingVertical: 8,
-    paddingHorizontal: 18,
-    borderRadius: 20,
+    paddingHorizontal: 22,
+    borderRadius: 22,
+    marginTop: 10,
   },
-  editButtonText: { color: "white", fontSize: 14, fontWeight: "600" },
+  editButtonText: { color: "#EAFDF4", fontSize: 14, fontWeight: "600" },
 
   card: {
     width: "90%",
-    backgroundColor: "white",
+    backgroundColor: "#121E18", 
     borderRadius: 14,
     padding: 15,
     marginBottom: 15,
-    elevation: 2,
+    borderColor: "#2D665B",
+    borderWidth: 1,
   },
 
   row: {
@@ -347,24 +317,21 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
 
-  label: { fontSize: 16, color: "#444" },
-  value: { fontSize: 16, color: "#222", fontWeight: "600" },
-  arrow: { fontSize: 18, color: "#888" },
-  divider: { height: 1, backgroundColor: "#eee" },
+  label: { fontSize: 16, color: "#D1FADF" },
+  value: { fontSize: 16, color: "#EAFDF4", fontWeight: "600" },
 
+  arrow: { fontSize: 18, color: "#22C55E" },
+
+  divider: { height: 1, backgroundColor: "#2D665B", opacity: 0.4 },
 
   historyContainer: {
-    backgroundColor: "#ffffff",
+    backgroundColor: "#121E18",
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: "#e5e5e5",
-    elevation: 1,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    borderColor: "#2D665B",
   },
 
   historyRow: {
@@ -374,31 +341,23 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
 
-  historyTitle: {
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#333",
-  },
-
-  dropdownIcon: {
-    fontSize: 18,
-    color: "#555",
-  },
+  historyTitle: { fontSize: 15, fontWeight: "500", color: "#EAFDF4" },
+  dropdownIcon: { fontSize: 18, color: "#22C55E" },
 
   expandedBox: {
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#0A1611",
     padding: 12,
     borderRadius: 10,
     marginTop: 6,
     borderWidth: 1,
-    borderColor: "#e5e5e5",
+    borderColor: "#2D665B",
   },
 
   sectionTitle: {
     fontSize: 15,
     fontWeight: "700",
     marginBottom: 6,
-    color: "#222",
+    color: "#EAFDF4",
   },
 
   resultRow: {
@@ -407,25 +366,66 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
 
-  resultLabel: { fontWeight: "600", color: "#333" },
-  resultValue: { opacity: 0.8, color: "#333" },
+  resultLabel: { fontWeight: "600", color: "#D1FADF" },
+  resultValue: { opacity: 0.9, color: "#EAFDF4" },
 
   totalLine: {
     marginTop: 10,
     fontSize: 15,
     fontWeight: "700",
-    color: "#000",
+    color: "#22C55E",
   },
 
-
+  
   logoutButton: {
     width: "90%",
-    backgroundColor: "#fff",
+    borderWidth: 1.5,
+    borderColor: "#22C55E",
     paddingVertical: 15,
     borderRadius: 14,
     alignItems: "center",
     marginTop: 10,
+    backgroundColor: "transparent",
   },
 
-  logoutText: { color: "red", fontSize: 16, fontWeight: "600" },
+  logoutText: { color: "#22C55E", fontSize: 16, fontWeight: "600" },
+
+  
+  authCard: {
+    width: "85%",
+    backgroundColor: "#121E18",
+    paddingVertical: 30,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#2D665B",
+  },
+
+  authTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#EAFDF4",
+    marginBottom: 10,
+  },
+
+  authButton: {
+    width: "80%",
+    borderWidth: 1.5,
+    borderColor: "#22C55E",
+    paddingVertical: 12,
+    borderRadius: 25,
+    alignItems: "center",
+    marginBottom: 12,
+  },
+
+  authSecondaryButton: {
+    borderColor: "#4EA89A",
+  },
+
+  authButtonText: {
+    color: "#EAFDF4",
+    fontSize: 16,
+    fontWeight: "600",
+  },
 });
