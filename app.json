@@ -1,37 +1,32 @@
 {
   "expo": {
-    "name": "MovieFlix",
-    "slug": "expo-practice-app",
+    "name": "Khoj CarbonChain",
+    "slug": "khoj-carbonchain",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/logo.png",
-    "scheme": "expopracticeapp",
+    "icon": "./assets/images/app-logo.png",
+    "scheme": "khojcarbonchain",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/images/logo.png",
-        "backgroundColor": "#121E18"
-      },
       "edgeToEdgeEnabled": true
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/logo.png"
+      "favicon": "./assets/images/app-logo.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/logo.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#121E18"
+          "image": "./assets/images/app-logo.png",
+          "imageWidth": 250,
+          "resizeMode": "contain"
         }
       ],
       "expo-font",
