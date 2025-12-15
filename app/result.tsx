@@ -1,4 +1,4 @@
-// app/result.tsx  ← FINAL: Toggle Solar vs Trees + per-unit reduction
+// app/result.tsx  ← FINAL FIX: Shows sample when form is empty, real data otherwise
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -10,8 +10,8 @@ const PNG_EF = 1.88;
 const PETROL_EF = 2.3;
 const DIESEL_EF = 2.7;
 const CNG_EF = 2.7;
-const SOLAR_PER_KWP = 120 * 1.02;  // 122.4 kg per kWp
-const PANEL_WATTAGE = 350;         // Average panel in India
+const SOLAR_PER_KWP = 120 * 1.02;
+const PANEL_WATTAGE = 350;
 const TREE_PER_TREE = 5.0;
 
 // --- HELPER COMPONENT FOR ROWS ---
@@ -38,9 +38,12 @@ export default function Result() {
   const router = useRouter();
   const urlParams = useLocalSearchParams();
 
-  // Use real data if params exist, otherwise sample
-  const hasParams = Object.keys(urlParams).length > 0;
-  const p = hasParams ? urlParams : {
+  // Check if any meaningful data was sent (not just empty strings)
+  const hasRealData = Object.values(urlParams).some(value => 
+    value && String(value).trim() !== "" && String(value).trim() !== "0"
+  );
+
+  const p = hasRealData ? urlParams : {
     name: "Sample Villa",
     gridElectricity: "420",
     gasPNG: "25",
@@ -76,12 +79,10 @@ export default function Result() {
   const treeOffset = trees * TREE_PER_TREE;
   const net = gross - solarOffset - treeOffset;
 
-  // Suggestions
   const needKwp = net > 0 ? Number((net / SOLAR_PER_KWP).toFixed(1)) : 0;
   const needPanels = net > 0 ? Math.ceil(net / (SOLAR_PER_KWP * (1000 / PANEL_WATTAGE))) : 0;
   const needTrees = net > 0 ? Math.ceil(net / TREE_PER_TREE) : 0;
 
-  // Toggle state: true = Solar path, false = Tree path
   const [showSolarPath, setShowSolarPath] = useState(true);
 
   return (
@@ -120,6 +121,7 @@ export default function Result() {
           )}
         </View>
 
+        {/* Breakdown section — same as yours */}
         <View className="space-y-4 mb-8">
           <View className="bg-red-900/10 rounded-2xl p-5 border border-red-500/20 mb-2">
             <View className="flex-row items-center mb-4">
@@ -174,7 +176,6 @@ export default function Result() {
           <View className="bg-card rounded-2xl p-6 border border-white/10 mb-6 shadow-lg shadow-black/40">
             <Text className="text-lg font-bold text-center text-dark mb-6">Path to Carbon Neutrality</Text>
 
-            {/* Toggle Buttons */}
             <View className="flex-row justify-center gap-4 mb-8">
               <TouchableOpacity
                 onPress={() => setShowSolarPath(true)}
@@ -190,7 +191,6 @@ export default function Result() {
               </TouchableOpacity>
             </View>
 
-            {/* Single Path Shown */}
             <View className="items-center">
               {showSolarPath ? (
                 <>
