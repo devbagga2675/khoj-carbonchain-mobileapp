@@ -4,10 +4,16 @@ import "./global.css";
 export default function RootLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      {/* The Tab Navigator */}
+      {/* 1. Splash Screen (Initial Route) */}
+      <Stack.Screen name="index" />
+
+      {/* 2. Main App (Tabs) */}
       <Stack.Screen name="(tabs)" />
 
-      {/* The Calculation Flow */}
+      {/* 3. Authentication Flow */}
+      <Stack.Screen name="auth" />
+
+      {/* 4. Standalone Calculator Pages */}
       <Stack.Screen
         name="form"
         options={{

@@ -12,7 +12,7 @@ import { useRouter } from "expo-router";
 
 
 //  Dummy login state (replace with Firebase later)
-const userLoggedIn = true; // change to false to test unauthenticated UI
+const userLoggedIn = false; // change to false to test unauthenticated UI
 
 
 // ------------------ DUMMY PROFILE ------------------
