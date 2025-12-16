@@ -1,20 +1,26 @@
-// app/result.tsx  ← FINAL FIX: Shows sample when form is empty, real data otherwise
+// app/result.tsx 
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 
-// --- CONSTANTS ---
-const GRID_EF = 1.02;
-const PNG_EF = 1.88;
-const PETROL_EF = 2.3;
-const DIESEL_EF = 2.7;
-const CNG_EF = 2.7;
-const SOLAR_PER_KWP = 120 * 1.02;
-const PANEL_WATTAGE = 350;
-const TREE_PER_TREE = 5.0;
+// --- CONSTANTS (exactly matching Excel sheet) ---
+const GRID_EF = 1.02;                    // kgCO₂e/kWh
+const PNG_EF = 1.88;                     // kgCO₂e/SCM
+const PETROL_EF = 2.3;                   // kgCO₂e/L
+const DIESEL_EF = 2.7;                   // kgCO₂e/L
+const CNG_EF = 2.7;                      // kgCO₂e/kg
 
-// --- HELPER COMPONENT FOR ROWS ---
+const SOLAR_MONTHLY_KWH_PER_KWP = 120;   // kWh/kWp/month
+const SOLAR_EF = 1.02;                   // kgCO₂e/kWh
+const SOLAR_PER_KWP_BIMONTHLY = SOLAR_MONTHLY_KWH_PER_KWP * SOLAR_EF * 2; // 244.8 kgCO₂e per kWp bi-monthly
+
+const PANEL_KWP = 0.35;                  // 350W panel
+const OFFSET_PER_PANEL = PANEL_KWP * SOLAR_PER_KWP_BIMONTHLY; // ≈85.68 → rounded to 86 in UI
+
+const TREE_PER_TREE_BIMONTHLY = 5.0;     // kgCO₂e/tree/bi-monthly
+
+// --- HELPER COMPONENT ---
 const ResultRow = ({ label, value, unit, impact, colorClass, iconName }: any) => (
   <View className="flex-row justify-between items-center py-2.5 border-b border-white/5 last:border-0">
     <View className="flex-row items-center gap-3">
@@ -38,8 +44,7 @@ export default function Result() {
   const router = useRouter();
   const urlParams = useLocalSearchParams();
 
-  // Check if any meaningful data was sent (not just empty strings)
-  const hasRealData = Object.values(urlParams).some(value => 
+  const hasRealData = Object.values(urlParams).some(value =>
     value && String(value).trim() !== "" && String(value).trim() !== "0"
   );
 
@@ -67,21 +72,27 @@ export default function Result() {
   const trees = Number(p.treeCount || "0");
   const name = (p.name as string) || "Your Home";
 
+  // Emissions
   const val_elec = electricity * GRID_EF;
   const val_gas = gasPNG * PNG_EF;
   const val_cyl = cngCyl * CNG_EF;
   const val_petrol = petrol * PETROL_EF;
   const val_diesel = diesel * DIESEL_EF;
   const val_cng = cng * CNG_EF;
+
   const gross = val_elec + val_gas + val_cyl + val_petrol + val_diesel + val_cng;
 
-  const solarOffset = solarKwp * SOLAR_PER_KWP;
-  const treeOffset = trees * TREE_PER_TREE;
-  const net = gross - solarOffset - treeOffset;
+  // Offsets
+  const solarOffset = solarKwp * SOLAR_PER_KWP_BIMONTHLY;
+  const treeOffset = trees * TREE_PER_TREE_BIMONTHLY;
 
-  const needKwp = net > 0 ? Number((net / SOLAR_PER_KWP).toFixed(1)) : 0;
-  const needPanels = net > 0 ? Math.ceil(net / (SOLAR_PER_KWP * (1000 / PANEL_WATTAGE))) : 0;
-  const needTrees = net > 0 ? Math.ceil(net / TREE_PER_TREE) : 0;
+  const net = gross - solarOffset - treeOffset;
+  const surplus = net < 0 ? Math.abs(Math.round(net)) : 0;
+
+  // Suggestions (for when net > 0)
+  const needKwp = net > 0 ? Number((net / SOLAR_PER_KWP_BIMONTHLY).toFixed(1)) : 0;
+  const needPanels = net > 0 ? Math.ceil(net / OFFSET_PER_PANEL) : 0;
+  const needTrees = net > 0 ? Math.ceil(net / TREE_PER_TREE_BIMONTHLY) : 0;
 
   const [showSolarPath, setShowSolarPath] = useState(true);
 
@@ -99,15 +110,17 @@ export default function Result() {
           Calculation Result
         </Text>
         <Text className="text-[15px] text-dark-100 leading-[22px]">
-          Here is your carbon footprint summary for
-          {"\n"}
+          Here is your carbon footprint summary for{"\n"}
           <Text className="font-semibold text-secondary">{name}</Text>
         </Text>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 60 }} className="px-6 pt-6" showsVerticalScrollIndicator={false}>
+        {/* Net Footprint */}
         <View className="bg-card rounded-3xl p-6 mb-6 shadow-lg shadow-black/50 border border-white/5 items-center">
-          <Text className="text-dark-100 text-sm font-semibold uppercase tracking-widest mb-2 opacity-70">Net Carbon Footprint</Text>
+          <Text className="text-dark-100 text-sm font-semibold uppercase tracking-widest mb-2 opacity-70">
+            Net Carbon Footprint
+          </Text>
           <Text className="text-[64px] leading-[70px] font-black text-secondary">
             {net > 0 ? Math.round(net) : 0}
           </Text>
@@ -115,14 +128,20 @@ export default function Result() {
           {net <= 0 && (
             <View className="mt-4 px-6 py-2 bg-secondary rounded-full shadow-sm">
               <Text className="text-black font-bold text-xs uppercase tracking-widest">
-                Carbon Neutral
+                Carbon Neutral{surplus > 0 ? " + Surplus!" : ""}
               </Text>
             </View>
           )}
+          {surplus > 0 && (
+            <Text className="text-lg text-secondary font-bold mt-3">
+              You saved an extra {surplus} kg CO₂e!
+            </Text>
+          )}
         </View>
 
-        {/* Breakdown section — same as yours */}
+        {/* Breakdown */}
         <View className="space-y-4 mb-8">
+          {/* Emissions */}
           <View className="bg-red-900/10 rounded-2xl p-5 border border-red-500/20 mb-2">
             <View className="flex-row items-center mb-4">
               <View className="w-2 h-2 rounded-full bg-red-500 mr-2 shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
@@ -142,7 +161,8 @@ export default function Result() {
             </View>
           </View>
 
-          {(solarKwp > 0) && (
+          {/* Solar */}
+          {solarKwp > 0 && (
             <View className="bg-green-900/10 rounded-2xl p-5 border border-green-500/20 mb-2">
               <View className="flex-row items-center mb-4">
                 <View className="w-2 h-2 rounded-full bg-green-500 mr-2 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
@@ -156,7 +176,8 @@ export default function Result() {
             </View>
           )}
 
-          {(trees > 0) && (
+          {/* Trees */}
+          {trees > 0 && (
             <View className="bg-emerald-900/10 rounded-2xl p-5 border border-emerald-500/20 mb-2">
               <View className="flex-row items-center mb-4">
                 <View className="w-2 h-2 rounded-full bg-emerald-500 mr-2 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
@@ -171,54 +192,70 @@ export default function Result() {
           )}
         </View>
 
-        {/* Toggle + Single Path + Per-unit Info */}
-        {net > 0 && (
-          <View className="bg-card rounded-2xl p-6 border border-white/10 mb-6 shadow-lg shadow-black/40">
-            <Text className="text-lg font-bold text-center text-dark mb-6">Path to Carbon Neutrality</Text>
+        {/* ALWAYS SHOW PATH / SURPLUS SECTION */}
+        <View className="bg-card rounded-2xl p-6 border border-white/10 mb-6 shadow-lg shadow-black/40">
+          <Text className="text-lg font-bold text-center text-dark mb-6">
+            {net > 0 ? "Path to Carbon Neutrality" : "You're Doing Amazing!"}
+          </Text>
 
-            <View className="flex-row justify-center gap-4 mb-8">
-              <TouchableOpacity
-                onPress={() => setShowSolarPath(true)}
-                className={`px-6 py-2 rounded-full ${showSolarPath ? 'bg-secondary' : 'bg-white/10 border border-white/20'}`}
-              >
-                <Text className={`font-bold text-sm ${showSolarPath ? 'text-black' : 'text-dark-100'}`}>Go Solar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setShowSolarPath(false)}
-                className={`px-6 py-2 rounded-full ${!showSolarPath ? 'bg-secondary' : 'bg-white/10 border border-white/20'}`}
-              >
-                <Text className={`font-bold text-sm ${!showSolarPath ? 'text-black' : 'text-dark-100'}`}>Plant Trees</Text>
-              </TouchableOpacity>
-            </View>
+          {net > 0 ? (
+            <>
+              <View className="flex-row justify-center gap-4 mb-8">
+                <TouchableOpacity
+                  onPress={() => setShowSolarPath(true)}
+                  className={`px-6 py-2 rounded-full ${showSolarPath ? 'bg-secondary' : 'bg-white/10 border border-white/20'}`}
+                >
+                  <Text className={`font-bold text-sm ${showSolarPath ? 'text-black' : 'text-dark-100'}`}>Go Solar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setShowSolarPath(false)}
+                  className={`px-6 py-2 rounded-full ${!showSolarPath ? 'bg-secondary' : 'bg-white/10 border border-white/20'}`}
+                >
+                  <Text className={`font-bold text-sm ${!showSolarPath ? 'text-black' : 'text-dark-100'}`}>Plant Trees</Text>
+                </TouchableOpacity>
+              </View>
 
-            <View className="items-center">
-              {showSolarPath ? (
-                <>
-                  <View className="w-20 h-20 bg-blue-500/10 rounded-full items-center justify-center mb-4 border border-blue-500/20">
-                    <Ionicons name="sunny" size={48} color="#3b82f6" />
-                  </View>
-                  <Text className="text-5xl font-extrabold text-blue-400 mb-2">{needPanels}</Text>
-                  <Text className="text-lg font-bold text-dark-100 opacity-80 uppercase tracking-wider">Panels Needed</Text>
-                  <Text className="text-sm text-dark-100 opacity-60 mt-2">≈ {needKwp} kWp</Text>
-                  <Text className="text-xs text-dark-100 opacity-50 mt-4">
-                    One panel reduces ~122 kg CO₂e
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <View className="w-20 h-20 bg-green-500/10 rounded-full items-center justify-center mb-4 border border-green-500/20">
-                    <Ionicons name="leaf" size={48} color="#22c55e" />
-                  </View>
-                  <Text className="text-5xl font-extrabold text-green-400 mb-2">{needTrees}</Text>
-                  <Text className="text-lg font-bold text-dark-100 opacity-80 uppercase tracking-wider">Trees Needed</Text>
-                  <Text className="text-xs text-dark-100 opacity-50 mt-4">
-                    One tree reduces 5 kg CO₂e
-                  </Text>
-                </>
+              <View className="items-center">
+                {showSolarPath ? (
+                  <>
+                    <View className="w-20 h-20 bg-blue-500/10 rounded-full items-center justify-center mb-4 border border-blue-500/20">
+                      <Ionicons name="sunny" size={48} color="#3b82f6" />
+                    </View>
+                    <Text className="text-5xl font-extrabold text-blue-400 mb-2">{needPanels}</Text>
+                    <Text className="text-lg font-bold text-dark-100 opacity-80 uppercase tracking-wider">Panels Needed</Text>
+                    <Text className="text-sm text-dark-100 opacity-60 mt-2">≈ {needKwp} kWp</Text>
+                    <Text className="text-xs text-dark-100 opacity-50 mt-4">One panel reduces ~86 kg CO₂e</Text>
+                  </>
+                ) : (
+                  <>
+                    <View className="w-20 h-20 bg-green-500/10 rounded-full items-center justify-center mb-4 border border-green-500/20">
+                      <Ionicons name="leaf" size={48} color="#22c55e" />
+                    </View>
+                    <Text className="text-5xl font-extrabold text-green-400 mb-2">{needTrees}</Text>
+                    <Text className="text-lg font-bold text-dark-100 opacity-80 uppercase tracking-wider">Trees Needed</Text>
+                    <Text className="text-xs text-dark-100 opacity-50 mt-4">One tree reduces 5 kg CO₂e</Text>
+                  </>
+                )}
+              </View>
+            </>
+          ) : (
+            <View className="items-center py-8">
+              <View className="w-24 h-24 bg-green-500/20 rounded-full items-center justify-center mb-6 border border-green-500/30">
+                <Ionicons name="checkmark-circle" size={72} color="#22c55e" />
+              </View>
+              <Text className="text-2xl font-bold text-green-400 mb-3">Already Carbon Neutral!</Text>
+              <Text className="text-center text-dark-100 text-sm px-6">
+                Your solar panels and trees are offsetting{'\n'}
+                all your emissions — and even creating a surplus.
+              </Text>
+              {surplus > 0 && (
+                <Text className="text-4xl font-extrabold text-green-400 mt-6">
+                  +{surplus} kg CO₂e saved
+                </Text>
               )}
             </View>
-          </View>
-        )}
+          )}
+        </View>
 
         <View className="h-20" />
       </ScrollView>
