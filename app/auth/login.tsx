@@ -6,24 +6,67 @@ import {
   ScrollView,
   Platform,
   KeyboardAvoidingView,
+  Alert,
 } from "react-native";
 import React, { useState } from "react";
 import { useRouter, Link } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const BASE_URL = "http://45.114.212.131:8000";
 
 export default function LoginScreen() {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
   const [form, setForm] = useState({
     email: "",
     password: "",
   });
 
-  const handleLogin = () => {
-    console.log("Login Payload:", form);
-    router.dismissAll();
-    router.replace("/(tabs)");
+  // 🔥 LOGIN API INTEGRATION
+  const handleLogin = async () => {
+    if (!form.email || !form.password) {
+      Alert.alert("Error", "Email and password are required");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${BASE_URL}/api/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Login failed");
+      }
+
+      // ✅ SAVE TOKEN (CRITICAL FIX)
+      await AsyncStorage.setItem("token", data.token);
+
+      // (Optional but useful later)
+      await AsyncStorage.setItem("user", JSON.stringify(data.user));
+
+      Alert.alert("Success", "Login successful");
+
+      router.dismissAll();
+      router.replace("/(tabs)");
+    } catch (error: any) {
+      Alert.alert("Login Error", error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -36,7 +79,7 @@ export default function LoginScreen() {
           contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24 }}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Top Section: Back Button */}
+          {/* Back Button */}
           <View className="pt-8">
             <TouchableOpacity
               onPress={() => router.back()}
@@ -46,67 +89,52 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Main Content Container: Centered Vertically */}
+          {/* Content */}
           <View className="flex-1 justify-center pb-10">
-            {/* Header */}
             <View className="mb-10">
-              <Text className="text-4xl font-bold text-dark mb-3 tracking-tight">
+              <Text className="text-4xl font-bold text-dark mb-3">
                 Welcome Back
               </Text>
-              <Text className="text-base text-dark-100 leading-6 opacity-90">
-                Log in to your account to sync your carbon data and track your
-                progress.
+              <Text className="text-base text-dark-100">
+                Log in to sync your carbon data and track progress.
               </Text>
             </View>
 
-            {/* Form Fields */}
+            {/* Inputs */}
             <View className="flex flex-col gap-4">
-              {/* Email Input */}
+              {/* Email */}
               <View>
-                <Text className="text-sm font-semibold text-dark-100 mb-0 ml-1">
+                <Text className="text-sm font-semibold text-dark-100 ml-1">
                   Email Address
                 </Text>
-                <View className="flex-row items-center h-14 bg-card border border-secondary-200 rounded-full px-4 focus:border-secondary transition-colors">
-                  <Ionicons
-                    name="mail-outline"
-                    size={20}
-                    color="#4EA89A"
-                    style={{ marginRight: 10 }}
-                  />
-                  <TextInput
-                    className="flex-1 text-dark text-base h-full"
-                    placeholder="you@example.com"
-                    placeholderTextColor="#5a7a6f"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    value={form.email}
-                    onChangeText={(t) => setForm({ ...form, email: t })}
-                  />
-                </View>
+                <TextInput
+                  className="h-14 bg-card border border-secondary-200 rounded-full px-4 text-dark"
+                  placeholder="you@example.com"
+                  placeholderTextColor="#5a7a6f"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={form.email}
+                  onChangeText={(t) =>
+                    setForm({ ...form, email: t })
+                  }
+                />
               </View>
 
-              {/* Password Input */}
+              {/* Password */}
               <View>
-                <Text className="text-sm font-semibold text-dark-100 mb-0 ml-1">
+                <Text className="text-sm font-semibold text-dark-100 ml-1">
                   Password
                 </Text>
-                <View className="flex-row items-center h-14 bg-card border border-secondary-200 rounded-full px-4 focus:border-secondary transition-colors">
-                  <Ionicons
-                    name="lock-closed-outline"
-                    size={20}
-                    color="#4EA89A"
-                    style={{ marginRight: 10 }}
-                  />
-                  <TextInput
-                    className="flex-1 text-dark text-base h-full"
-                    placeholder="••••••••"
-                    placeholderTextColor="#5a7a6f"
-                    secureTextEntry
-                    value={form.password}
-                    onChangeText={(t) => setForm({ ...form, password: t })}
-                  />
-                </View>
-                {/* Forgot Password Link */}
+                <TextInput
+                  className="h-14 bg-card border border-secondary-200 rounded-full px-4 text-dark"
+                  placeholder="••••••••"
+                  placeholderTextColor="#5a7a6f"
+                  secureTextEntry
+                  value={form.password}
+                  onChangeText={(t) =>
+                    setForm({ ...form, password: t })
+                  }
+                />
                 <TouchableOpacity className="self-end mt-2">
                   <Text className="text-xs text-secondary font-medium">
                     Forgot Password?
@@ -114,27 +142,26 @@ export default function LoginScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Submit Button */}
+              {/* Login Button */}
               <TouchableOpacity
-                className="border border-green-500 py-3 px-[22px] rounded-full mt-4 shadow-lg shadow-secondary/20 h-14 items-center justify-center flex-row gap-2"
+                className="border border-green-500 h-14 rounded-full items-center justify-center mt-4"
                 onPress={handleLogin}
-                activeOpacity={0.8}
+                disabled={loading}
               >
-                <Text className="text-white text-lg font-semibold tracking-wide">
-                  Log In
+                <Text className="text-white text-lg font-semibold">
+                  {loading ? "Logging in..." : "Log In"}
                 </Text>
-                <Ionicons name="arrow-forward" size={20} color="white" />
               </TouchableOpacity>
             </View>
 
-            {/* Footer / Switch to Register */}
+            {/* Footer */}
             <View className="flex-row justify-center mt-10">
-              <Text className="text-dark-100 text-base">
+              <Text className="text-dark-100">
                 Don't have an account?{" "}
               </Text>
               <Link href="/auth/register" asChild>
                 <TouchableOpacity>
-                  <Text className="text-secondary font-bold text-base">
+                  <Text className="text-secondary font-bold">
                     Register
                   </Text>
                 </TouchableOpacity>
