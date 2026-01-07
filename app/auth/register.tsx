@@ -6,15 +6,19 @@ import {
   ScrollView,
   Platform,
   KeyboardAvoidingView,
+  Alert,
 } from "react-native";
 import React, { useState } from "react";
 import { useRouter, Link } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+const BASE_URL = "http://45.114.212.131:8000";
+
 export default function RegisterScreen() {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -24,15 +28,51 @@ export default function RegisterScreen() {
     country: "",
   });
 
-  const handleRegister = () => {
-    // TODO: Add API integration here
-    console.log("Register Payload:", form);
-    router.dismissAll();
-    router.replace("/(tabs)");
-  };
-
   const updateForm = (key: string, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  // 🔥 REGISTER API INTEGRATION
+  const handleRegister = async () => {
+    if (!form.email || !form.password) {
+      Alert.alert("Error", "Email and password are required");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${BASE_URL}/api/auth/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+          firstName: form.firstName,
+          lastName: form.lastName,
+          phone: form.phone,
+          country: form.country,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Registration failed");
+      }
+
+      Alert.alert("Success", "Account created successfully");
+
+      // Redirect to Login or Tabs
+      router.dismissAll();
+      router.replace("/auth/login");
+    } catch (error: any) {
+      Alert.alert("Registration Error", error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -50,181 +90,114 @@ export default function RegisterScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header Section */}
+          {/* Header */}
           <View className="pt-4 mb-4">
-            {/* Back Button */}
             <TouchableOpacity
               onPress={() => router.back()}
-              className="w-10 h-10 rounded-full bg-card items-center justify-center border border-secondary-200 shadow-sm mb-6"
+              className="w-10 h-10 rounded-full bg-card items-center justify-center border border-secondary-200 mb-6"
             >
               <Ionicons name="arrow-back" size={20} color="#EAFDF4" />
             </TouchableOpacity>
 
-            <Text className="text-4xl font-bold text-dark mb-3 tracking-tight">
+            <Text className="text-4xl font-bold text-dark mb-3">
               Create Account
             </Text>
-            <Text className="text-base text-dark-100 leading-6 opacity-90">
+            <Text className="text-base text-dark-100">
               Join the movement towards a sustainable future.
             </Text>
           </View>
 
-          {/* Form Fields */}
+          {/* Form */}
           <View className="flex flex-col gap-4">
-            {/* Row: First & Last Name */}
+            {/* First & Last Name */}
             <View className="flex-row gap-3">
               <View className="flex-1">
-                <Text className="text-sm font-semibold text-dark-100 mb-0 ml-1">
+                <Text className="text-sm font-semibold text-dark-100 ml-1">
                   First Name
                 </Text>
-                <View className="flex-row items-center h-14 bg-card border border-secondary-200 rounded-full px-3 focus:border-secondary transition-colors">
-                  <Ionicons
-                    name="person-outline"
-                    size={18}
-                    color="#4EA89A"
-                    style={{ marginRight: 8 }}
-                  />
-                  <TextInput
-                    className="flex-1 text-dark text-base h-full"
-                    placeholder="John"
-                    placeholderTextColor="#5a7a6f"
-                    value={form.firstName}
-                    onChangeText={(t) => updateForm("firstName", t)}
-                  />
-                </View>
+                <TextInput
+                  className="h-14 bg-card border border-secondary-200 rounded-full px-4 text-dark"
+                  placeholder="John"
+                  placeholderTextColor="#5a7a6f"
+                  value={form.firstName}
+                  onChangeText={(t) => updateForm("firstName", t)}
+                />
               </View>
+
               <View className="flex-1">
-                <Text className="text-sm font-semibold text-dark-100 mb-0 ml-1">
+                <Text className="text-sm font-semibold text-dark-100 ml-1">
                   Last Name
                 </Text>
-                <View className="flex-row items-center h-14 bg-card border border-secondary-200 rounded-full px-3 focus:border-secondary transition-colors">
-                  <TextInput
-                    className="flex-1 text-dark text-base h-full"
-                    placeholder="Doe"
-                    placeholderTextColor="#5a7a6f"
-                    value={form.lastName}
-                    onChangeText={(t) => updateForm("lastName", t)}
-                  />
-                </View>
+                <TextInput
+                  className="h-14 bg-card border border-secondary-200 rounded-full px-4 text-dark"
+                  placeholder="Doe"
+                  placeholderTextColor="#5a7a6f"
+                  value={form.lastName}
+                  onChangeText={(t) => updateForm("lastName", t)}
+                />
               </View>
             </View>
 
             {/* Email */}
-            <View>
-              <Text className="text-sm font-semibold text-dark-100 mb-0 ml-1">
-                Email
-              </Text>
-              <View className="flex-row items-center h-14 bg-card border border-secondary-200 rounded-full px-4 focus:border-secondary transition-colors">
-                <Ionicons
-                  name="mail-outline"
-                  size={20}
-                  color="#4EA89A"
-                  style={{ marginRight: 10 }}
-                />
-                <TextInput
-                  className="flex-1 text-dark text-base h-full"
-                  placeholder="john@example.com"
-                  placeholderTextColor="#5a7a6f"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  value={form.email}
-                  onChangeText={(t) => updateForm("email", t)}
-                  textContentType="emailAddress"
-                />
-              </View>
-            </View>
+            <TextInput
+              className="h-14 bg-card border border-secondary-200 rounded-full px-4 text-dark"
+              placeholder="Email"
+              placeholderTextColor="#5a7a6f"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              value={form.email}
+              onChangeText={(t) => updateForm("email", t)}
+            />
 
             {/* Phone */}
-            <View>
-              <Text className="text-sm font-semibold text-dark-100 mb-0 ml-1">
-                Phone Number
-              </Text>
-              <View className="flex-row items-center h-14 bg-card border border-secondary-200 rounded-full px-4 focus:border-secondary transition-colors">
-                <Ionicons
-                  name="call-outline"
-                  size={20}
-                  color="#4EA89A"
-                  style={{ marginRight: 10 }}
-                />
-                <TextInput
-                  className="flex-1 text-dark text-base h-full"
-                  placeholder="+1 555 000 0000"
-                  placeholderTextColor="#5a7a6f"
-                  keyboardType="phone-pad"
-                  value={form.phone}
-                  onChangeText={(t) => updateForm("phone", t)}
-                />
-              </View>
-            </View>
+            <TextInput
+              className="h-14 bg-card border border-secondary-200 rounded-full px-4 text-dark"
+              placeholder="Phone"
+              placeholderTextColor="#5a7a6f"
+              keyboardType="phone-pad"
+              value={form.phone}
+              onChangeText={(t) => updateForm("phone", t)}
+            />
 
             {/* Country */}
-            <View>
-              <Text className="text-sm font-semibold text-dark-100 mb-0 ml-1">
-                Country
-              </Text>
-              <View className="flex-row items-center h-14 bg-card border border-secondary-200 rounded-full px-4 focus:border-secondary transition-colors">
-                <Ionicons
-                  name="globe-outline"
-                  size={20}
-                  color="#4EA89A"
-                  style={{ marginRight: 10 }}
-                />
-                <TextInput
-                  className="flex-1 text-dark text-base h-full"
-                  placeholder="USA"
-                  placeholderTextColor="#5a7a6f"
-                  value={form.country}
-                  onChangeText={(t) => updateForm("country", t)}
-                />
-              </View>
-            </View>
+            <TextInput
+              className="h-14 bg-card border border-secondary-200 rounded-full px-4 text-dark"
+              placeholder="Country"
+              placeholderTextColor="#5a7a6f"
+              value={form.country}
+              onChangeText={(t) => updateForm("country", t)}
+            />
 
             {/* Password */}
-            <View>
-              <Text className="text-sm font-semibold text-dark-100 mb-0 ml-1">
-                Password
-              </Text>
-              <View className="flex-row items-center h-14 bg-card border border-secondary-200 rounded-full px-4 focus:border-secondary transition-colors">
-                <Ionicons
-                  name="lock-closed-outline"
-                  size={20}
-                  color="#4EA89A"
-                  style={{ marginRight: 10 }}
-                />
-                <TextInput
-                  className="flex-1 text-dark text-base h-full"
-                  placeholder="••••••••"
-                  placeholderTextColor="#5a7a6f"
-                  secureTextEntry
-                  value={form.password}
-                  onChangeText={(t) => updateForm("password", t)}
-                  textContentType="newPassword"
-                />
-              </View>
-            </View>
+            <TextInput
+              className="h-14 bg-card border border-secondary-200 rounded-full px-4 text-dark"
+              placeholder="Password"
+              placeholderTextColor="#5a7a6f"
+              secureTextEntry
+              value={form.password}
+              onChangeText={(t) => updateForm("password", t)}
+            />
 
-            {/* Submit Button */}
+            {/* Register Button */}
             <TouchableOpacity
-              className="border border-green-500 py-3 px-[22px] rounded-full mt-4 shadow-lg shadow-secondary/20 h-14 items-center justify-center flex-row gap-2"
+              className="border border-green-500 h-14 rounded-full items-center justify-center mt-4"
               onPress={handleRegister}
-              activeOpacity={0.8}
+              disabled={loading}
             >
-              <Text className="text-white text-lg font-semibold tracking-wide">
-                Register
+              <Text className="text-white text-lg font-semibold">
+                {loading ? "Registering..." : "Register"}
               </Text>
-              <Ionicons name="arrow-forward" size={20} color="white" />
             </TouchableOpacity>
           </View>
 
           {/* Footer */}
-          <View className="flex-row justify-center mt-8 mb-4">
-            <Text className="text-dark-100 text-base">
+          <View className="flex-row justify-center mt-8">
+            <Text className="text-dark-100">
               Already have an account?{" "}
             </Text>
             <Link href="/auth/login" asChild>
               <TouchableOpacity>
-                <Text className="text-secondary font-bold text-base">
-                  Log In
-                </Text>
+                <Text className="text-secondary font-bold">Log In</Text>
               </TouchableOpacity>
             </Link>
           </View>

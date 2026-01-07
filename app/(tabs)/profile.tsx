@@ -7,112 +7,18 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-
-//  Dummy login state (replace with Firebase later)
-const userLoggedIn = false; // change to false to test unauthenticated UI
-
-
-// ------------------ DUMMY PROFILE ------------------
-const DUMMY_PROFILE = {
-  name: "John Doe",
-  email: "john@example.com",
-  phone: "+91 9876543210",
-  country: "India",
-  profileImage:
-    "https://i.pinimg.com/736x/6f/7b/ed/6f7bed633cace91ac7c1d2e95dd91ee5.jpg",
-};
-
-
-// ------------------ DUMMY HISTORY ------------------
-const DUMMY_HISTORY = [
-  {
-    id: 1,
-    title: "Gross: 240 kg | Net: 180 kg",
-    inputs: {
-      electricity: 120,
-      gasPNG: 10,
-      cngCyl: 2,
-      petrol: 4,
-      diesel: 0,
-      cng: 3,
-      solarKwp: 1,
-      solarPanels: 3,
-      trees: 2,
-    },
-    results: {
-      gross: 240,
-      solarOffset: 40,
-      treeOffset: 20,
-      net: 180,
-      needSolar: 2,
-      needTrees: 6,
-      val_elec: 120,
-      val_gas: 10,
-      val_cyl: 2,
-      val_petrol: 4,
-      val_diesel: 0,
-      val_cng: 3,
-    },
-  },
-  {
-    id: 2,
-    title: "Gross: 310 kg | Net: 260 kg",
-    inputs: {
-      electricity: 180,
-      gasPNG: 12,
-      cngCyl: 1,
-      petrol: 6,
-      diesel: 3,
-      cng: 4,
-      solarKwp: 0,
-      solarPanels: 0,
-      trees: 1,
-    },
-    results: {
-      gross: 310,
-      solarOffset: 0,
-      treeOffset: 10,
-      net: 260,
-      needSolar: 3,
-      needTrees: 10,
-      val_elec: 180,
-      val_gas: 12,
-      val_cyl: 1,
-      val_petrol: 6,
-      val_diesel: 3,
-      val_cng: 4,
-    },
-  },
-];
-
-
-// ------------------ ResultRow Component ------------------
-interface ResultRowProps {
-  label: string;
-  value: number;
-  unit: string;
-  impact: number;
-}
-
-const ResultRow: React.FC<ResultRowProps> = ({ label, value, unit, impact }) => {
-  return (
-    <View style={styles.resultRow}>
-      <Text style={styles.resultLabel}>{label}</Text>
-      <Text style={styles.resultValue}>
-        {value} {unit} = {impact} kg
-      </Text>
-    </View>
-  );
-};
-
+const BASE_URL = "http://45.114.212.131:8000";
 
 // ------------------ MAIN PROFILE SCREEN ------------------
 const Profile = () => {
   const router = useRouter();
 
+  const [userLoggedIn, setUserLoggedIn] = useState(true);
   const [profile, setProfile] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -121,26 +27,96 @@ const Profile = () => {
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (userLoggedIn) {
-      setProfile(DUMMY_PROFILE);
-      setHistory(DUMMY_HISTORY);
-    }
-    setLoading(false);
+    loadProfileData();
   }, []);
+
+  // ------------------ LOAD PROFILE + HISTORY ------------------
+  const loadProfileData = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+
+      if (!token) {
+        setUserLoggedIn(false);
+        setLoading(false);
+        return;
+      }
+
+      await fetchProfile(token);
+      await fetchHistory(token);
+    } catch (err) {
+      setUserLoggedIn(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ------------------ FETCH PROFILE ------------------
+  const fetchProfile = async (token: string) => {
+    const res = await fetch(`${BASE_URL}/api/auth/profile`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      throw new Error("Profile fetch failed");
+    }
+
+    setProfile({
+      name: `${data.user.firstName} ${data.user.lastName}`,
+      email: data.user.email,
+      phone: data.user.phone,
+      country: data.user.country,
+      profileImage:
+        BASE_URL + (data.user.profilePhoto || "/uploads/default.png"),
+    });
+  };
+
+  // ------------------ FETCH HISTORY ------------------
+  const fetchHistory = async (token: string) => {
+    const res = await fetch(`${BASE_URL}/api/calculations`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      throw new Error("History fetch failed");
+    }
+
+    const formatted = data.calculations.map((item: any) => ({
+      id: item.id,
+      title: `Net: ${Math.round(item.result.co2)} kg`,
+      inputs: item.inputs,
+      results: {
+        net: item.result.co2,
+      },
+    }));
+
+    setHistory(formatted);
+  };
 
   const toggleExpand = (id: number) => {
     setExpandedId(expandedId === id ? null : id);
   };
 
+  // ------------------ LOGOUT ------------------
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem("token");
+    router.replace("/auth/login");
+  };
 
   // ------------------ NOT LOGGED IN UI ------------------
   if (!userLoggedIn) {
     return (
       <View style={[styles.container, { justifyContent: "center" }]}>
-
         <View style={styles.authCard}>
           <Text style={styles.authTitle}>Welcome</Text>
-          <Text style={{ color: "#666", marginBottom: 20 }}>
+          <Text style={{ color: "#D1FADF", marginBottom: 20 }}>
             Please login or create an account
           </Text>
 
@@ -158,41 +134,32 @@ const Profile = () => {
             <Text style={styles.authButtonText}>Register</Text>
           </TouchableOpacity>
         </View>
-
       </View>
     );
   }
-
 
   // ------------------ LOADING ------------------
   if (loading) {
     return (
       <View style={styles.loader}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#22C55E" />
       </View>
     );
   }
 
-
   // ------------------ LOGGED IN UI ------------------
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
-
-      {/* PROFILE TOP */}
       <View style={styles.topSection}>
         <Image source={{ uri: profile.profileImage }} style={styles.avatar} />
         <Text style={styles.name}>{profile.name}</Text>
         <Text style={styles.email}>{profile.email}</Text>
 
-        {/* 🔥 Edit Profile only visible when logged in */}
-        {userLoggedIn && (
-          <TouchableOpacity style={styles.editButton}>
-            <Text style={styles.editButtonText}>Edit profile</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity style={styles.editButton}>
+          <Text style={styles.editButtonText}>Edit profile</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* DETAILS CARD */}
       <View style={styles.card}>
         <View style={styles.row}>
           <Text style={styles.label}>Phone</Text>
@@ -208,8 +175,10 @@ const Profile = () => {
 
         <View style={styles.divider} />
 
-        {/* HISTORY */}
-        <TouchableOpacity style={styles.row} onPress={() => setShowHistory(!showHistory)}>
+        <TouchableOpacity
+          style={styles.row}
+          onPress={() => setShowHistory(!showHistory)}
+        >
           <Text style={styles.label}>View History</Text>
           <Text style={styles.arrow}>{showHistory ? "▲" : "▶"}</Text>
         </TouchableOpacity>
@@ -218,8 +187,10 @@ const Profile = () => {
           <View style={{ marginTop: 12 }}>
             {history.map((item) => (
               <View key={item.id} style={styles.historyContainer}>
-                
-                <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.historyRow}>
+                <TouchableOpacity
+                  onPress={() => toggleExpand(item.id)}
+                  style={styles.historyRow}
+                >
                   <Text style={styles.historyTitle}>• {item.title}</Text>
                   <Text style={styles.dropdownIcon}>
                     {expandedId === item.id ? "▲" : "▼"}
@@ -229,20 +200,9 @@ const Profile = () => {
                 {expandedId === item.id && (
                   <View style={styles.expandedBox}>
                     <Text style={styles.sectionTitle}>Total Emissions</Text>
-
-                    {item.inputs.electricity > 0 && (
-                      <ResultRow
-                        label="Electricity"
-                        value={item.inputs.electricity}
-                        unit="kWh"
-                        impact={item.results.val_elec}
-                      />
-                    )}
-
                     <Text style={styles.totalLine}>
-                      Gross Total: {item.results.gross} kg
+                      Net: {Math.round(item.results.net)} kg
                     </Text>
-
                   </View>
                 )}
               </View>
@@ -251,18 +211,15 @@ const Profile = () => {
         )}
       </View>
 
-      {/* LOGOUT BUTTON */}
-      {userLoggedIn && (
-        <TouchableOpacity style={styles.logoutButton}>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      )}
-
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <Text style={styles.logoutText}>Logout</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 };
 
 export default Profile;
+
 
 
 
