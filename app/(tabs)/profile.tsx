@@ -1,388 +1,247 @@
-import React, { useEffect, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
-  Image,
   TouchableOpacity,
   ScrollView,
-  StyleSheet,
+  SafeAreaView,
   ActivityIndicator,
-  Alert,
+  RefreshControl,
+  StatusBar,
 } from "react-native";
-import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
 
 const BASE_URL = "http://45.114.212.131:8000";
 
-// ------------------ MAIN PROFILE SCREEN ------------------
-const Profile = () => {
-  const router = useRouter();
+const getGuestId = async () => {
+  let id = await AsyncStorage.getItem("guestId");
+  if (!id) {
+    const randomPart = Math.floor(Math.random() * 10000);
+    id = `guest_${Date.now()}_${randomPart}`;
+    await AsyncStorage.setItem("guestId", id);
+  }
+  return id;
+};
 
-  const [userLoggedIn, setUserLoggedIn] = useState(true);
-  const [profile, setProfile] = useState<any>(null);
-  const [history, setHistory] = useState<any[]>([]);
+interface UserProfile {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  carbonSaved?: number;
+  treesEquivalent?: number;
+  emissionsReduced?: number;
+  totalEmissions?: number;
+  totalOffset?: number;
+}
+
+interface CalculationHistory {
+  id: string;
+  createdAt: string;
+  result?: {
+    co2?: number;
+  };
+}
+
+export default function Profile() {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [history, setHistory] = useState<CalculationHistory[]>([]);
+  const [isGuest, setIsGuest] = useState(false);
 
-  const [showHistory, setShowHistory] = useState(false);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
-
-  useEffect(() => {
-    loadProfileData();
-  }, []);
-
-  // ------------------ LOAD PROFILE + HISTORY ------------------
-  const loadProfileData = async () => {
+  const fetchData = async () => {
     try {
+      if (!refreshing) setLoading(true);
       const token = await AsyncStorage.getItem("token");
+      const guestId = await getGuestId();
 
-      if (!token) {
-        setUserLoggedIn(false);
-        setLoading(false);
-        return;
+      if (token) {
+        setIsGuest(false);
+        const profileResp = await fetch(`${BASE_URL}/api/auth/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const profileData = await profileResp.json();
+        if (profileData.success) setUser(profileData.user);
+
+        const historyResp = await fetch(`${BASE_URL}/api/calculations`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const historyData = await historyResp.json();
+        if (historyData.success) setHistory(historyData.calculations || []);
+
+      } else {
+        setIsGuest(true);
+        const guestResp = await fetch(`${BASE_URL}/api/guest/profile/${guestId}`);
+        const guestData = await guestResp.json();
+        if (guestData.success) {
+          setUser({
+            firstName: "Guest",
+            lastName: "User",
+            email: "Guest Account",
+            totalEmissions: guestData.guest.totalEmissions,
+            totalOffset: guestData.guest.totalOffset,
+          });
+        }
+
+        const historyResp = await fetch(`${BASE_URL}/api/guest/calculations/${guestId}`);
+        const historyData = await historyResp.json();
+        if (historyData.success) setHistory(historyData.calculations || []);
       }
-
-      await fetchProfile(token);
-      await fetchHistory(token);
-    } catch (err) {
-      setUserLoggedIn(false);
+    } catch (error) {
+      console.error(error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  // ------------------ FETCH PROFILE ------------------
-  const fetchProfile = async (token: string) => {
-    const res = await fetch(`${BASE_URL}/api/auth/profile`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [])
+  );
 
-    const data = await res.json();
-
-    if (!res.ok || !data.success) {
-      throw new Error("Profile fetch failed");
-    }
-
-    setProfile({
-      name: `${data.user.firstName} ${data.user.lastName}`,
-      email: data.user.email,
-      phone: data.user.phone,
-      country: data.user.country,
-      profileImage:
-        BASE_URL + (data.user.profilePhoto || "/uploads/default.png"),
-    });
-  };
-
-  // ------------------ FETCH HISTORY ------------------
-  const fetchHistory = async (token: string) => {
-    const res = await fetch(`${BASE_URL}/api/calculations`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    const data = await res.json();
-
-    if (!res.ok || !data.success) {
-      throw new Error("History fetch failed");
-    }
-
-    const formatted = data.calculations.map((item: any) => ({
-      id: item.id,
-      title: `Net: ${Math.round(item.result.co2)} kg`,
-      inputs: item.inputs,
-      results: {
-        net: item.result.co2,
-      },
-    }));
-
-    setHistory(formatted);
-  };
-
-  const toggleExpand = (id: number) => {
-    setExpandedId(expandedId === id ? null : id);
-  };
-
-  // ------------------ LOGOUT ------------------
   const handleLogout = async () => {
     await AsyncStorage.removeItem("token");
+    await AsyncStorage.removeItem("userType");
     router.replace("/auth/login");
   };
 
-  // ------------------ NOT LOGGED IN UI ------------------
-  if (!userLoggedIn) {
+  const getInitials = () => {
+    if (!user?.firstName) return "G";
+    return user.firstName.charAt(0).toUpperCase();
+  };
+
+  if (loading && !refreshing) {
     return (
-      <View style={[styles.container, { justifyContent: "center" }]}>
-        <View style={styles.authCard}>
-          <Text style={styles.authTitle}>Welcome</Text>
-          <Text style={{ color: "#D1FADF", marginBottom: 20 }}>
-            Please login or create an account
-          </Text>
-
-          <TouchableOpacity
-            style={styles.authButton}
-            onPress={() => router.push("/auth/login")}
-          >
-            <Text style={styles.authButtonText}>Login</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.authButton, styles.authSecondaryButton]}
-            onPress={() => router.push("/auth/register")}
-          >
-            <Text style={styles.authButtonText}>Register</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
-  // ------------------ LOADING ------------------
-  if (loading) {
-    return (
-      <View style={styles.loader}>
+      <SafeAreaView className="flex-1 bg-primary items-center justify-center">
         <ActivityIndicator size="large" color="#22C55E" />
-      </View>
+      </SafeAreaView>
     );
   }
 
-  // ------------------ LOGGED IN UI ------------------
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
-      <View style={styles.topSection}>
-        <Image source={{ uri: profile.profileImage }} style={styles.avatar} />
-        <Text style={styles.name}>{profile.name}</Text>
-        <Text style={styles.email}>{profile.email}</Text>
-
-        <TouchableOpacity style={styles.editButton}>
-          <Text style={styles.editButtonText}>Edit profile</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.card}>
-        <View style={styles.row}>
-          <Text style={styles.label}>Phone</Text>
-          <Text style={styles.value}>{profile.phone}</Text>
-        </View>
-
-        <View style={styles.divider} />
-
-        <View style={styles.row}>
-          <Text style={styles.label}>Country</Text>
-          <Text style={styles.value}>{profile.country}</Text>
-        </View>
-
-        <View style={styles.divider} />
-
-        <TouchableOpacity
-          style={styles.row}
-          onPress={() => setShowHistory(!showHistory)}
-        >
-          <Text style={styles.label}>View History</Text>
-          <Text style={styles.arrow}>{showHistory ? "▲" : "▶"}</Text>
-        </TouchableOpacity>
-
-        {showHistory && (
-          <View style={{ marginTop: 12 }}>
-            {history.map((item) => (
-              <View key={item.id} style={styles.historyContainer}>
-                <TouchableOpacity
-                  onPress={() => toggleExpand(item.id)}
-                  style={styles.historyRow}
+    <SafeAreaView className="flex-1 bg-primary">
+      <StatusBar barStyle="light-content" backgroundColor="#040D07" />
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={() => { setRefreshing(true); fetchData(); }} 
+            tintColor="#22C55E" 
+            colors={["#22C55E"]}
+          />
+        }
+      >
+        <View className="bg-card pb-8 rounded-b-3xl border-b border-secondary-200 pt-4">
+            <View className="flex-row justify-end px-6 mb-4">
+                <TouchableOpacity 
+                    onPress={handleLogout} 
+                    className="p-2 bg-danger/10 rounded-full border border-danger/20"
                 >
-                  <Text style={styles.historyTitle}>• {item.title}</Text>
-                  <Text style={styles.dropdownIcon}>
-                    {expandedId === item.id ? "▲" : "▼"}
-                  </Text>
+                    <Ionicons name="log-out-outline" size={20} color="#EF4444" />
                 </TouchableOpacity>
+            </View>
 
-                {expandedId === item.id && (
-                  <View style={styles.expandedBox}>
-                    <Text style={styles.sectionTitle}>Total Emissions</Text>
-                    <Text style={styles.totalLine}>
-                      Net: {Math.round(item.results.net)} kg
+            <View className="items-center px-6">
+                <View className="w-24 h-24 bg-secondary-200/30 rounded-full items-center justify-center mb-4 border-2 border-secondary">
+                    <Text className="text-3xl font-pbold text-secondary">
+                        {getInitials()}
                     </Text>
-                  </View>
+                </View>
+                
+                <Text className="text-2xl font-pbold text-dark mb-1">
+                    {user?.firstName} {user?.lastName}
+                </Text>
+                
+                <Text className="text-dark-100 font-pregular text-sm mb-6">
+                    {user?.email}
+                </Text>
+
+                {isGuest && (
+                <TouchableOpacity 
+                    onPress={() => router.push("/auth/register")}
+                    className="bg-secondary py-3 px-6 rounded-full flex-row items-center gap-2"
+                >
+                    <Text className="text-dark-200 font-psemibold text-sm">Create Account</Text>
+                    <Ionicons name="arrow-forward" size={16} color="#000" />
+                </TouchableOpacity>
                 )}
-              </View>
-            ))}
-          </View>
-        )}
-      </View>
+            </View>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
-    </ScrollView>
+            <View className="flex-row mt-8 px-6 gap-4">
+                <View className="flex-1 bg-primary p-4 rounded-2xl border border-secondary-200">
+                    <View className="flex-row items-center mb-2">
+                        <Ionicons name="flame" size={16} color="#EF4444" style={{ marginRight: 6 }} />
+                        <Text className="text-xs font-pbold text-dark-100 uppercase tracking-wider">Emissions</Text>
+                    </View>
+                    <Text className="text-2xl font-pbold text-dark">
+                        {isGuest 
+                        ? (user?.totalEmissions || 0).toFixed(1) 
+                        : (user?.emissionsReduced || 0).toFixed(1)}
+                    </Text>
+                    <Text className="text-xs text-dark-100 font-pmedium mt-1">kg CO2e</Text>
+                </View>
+
+                <View className="flex-1 bg-primary p-4 rounded-2xl border border-secondary-200">
+                    <View className="flex-row items-center mb-2">
+                        <Ionicons name="leaf" size={16} color="#22C55E" style={{ marginRight: 6 }} />
+                        <Text className="text-xs font-pbold text-dark-100 uppercase tracking-wider">
+                            {isGuest ? "Offset" : "Trees"}
+                        </Text>
+                    </View>
+                    <Text className="text-2xl font-pbold text-dark">
+                        {isGuest 
+                        ? (user?.totalOffset || 0).toFixed(1)
+                        : (user?.treesEquivalent || 0).toFixed(1)
+                        }
+                    </Text>
+                    <Text className="text-xs text-dark-100 font-pmedium mt-1">
+                        {isGuest ? "kg removed" : "saved"}
+                    </Text>
+                </View>
+            </View>
+        </View>
+
+        <View className="px-6 mt-8">
+            <Text className="text-lg font-pbold text-dark mb-4">History</Text>
+            
+            {history.length === 0 ? (
+                <View className="bg-card p-8 rounded-2xl items-center justify-center border border-dashed border-secondary-200">
+                    <Ionicons name="document-text-outline" size={48} color="#2D665B" />
+                    <Text className="text-dark-100 mt-4 text-center font-pmedium">No calculations yet</Text>
+                    <Text className="text-dark-100/60 text-xs text-center mt-1 font-pregular">Start a calculation to see it here</Text>
+                </View>
+            ) : (
+                <View className="gap-3">
+                    {history.map((item) => (
+                        <View key={item.id} className="bg-card p-4 rounded-2xl border border-secondary-200 flex-row justify-between items-center">
+                            <View className="flex-row items-center gap-3">
+                                <View className="w-10 h-10 bg-secondary-200/20 rounded-full items-center justify-center">
+                                    <Ionicons name="calculator" size={20} color="#22C55E" />
+                                </View>
+                                <View>
+                                    <Text className="text-dark font-psemibold text-sm">Carbon Footprint</Text>
+                                    <Text className="text-xs text-dark-100 font-pregular mt-0.5">
+                                        {new Date(item.createdAt).toLocaleDateString()}
+                                    </Text>
+                                </View>
+                            </View>
+                            <View className="items-end">
+                                <Text className="text-dark font-pbold text-base">
+                                    {item.result?.co2?.toFixed(1) || 0}
+                                </Text>
+                                <Text className="text-[10px] text-dark-100 font-pmedium">kg CO2</Text>
+                            </View>
+                        </View>
+                    ))}
+                </View>
+            )}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
-};
-
-export default Profile;
-
-
-
-
-// ------------------ STYLES ------------------
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 40,
-    paddingBottom: 60,
-    alignItems: "center",
-    backgroundColor: "#040D07", 
-  },
-
-  loader: { flex: 1, justifyContent: "center", alignItems: "center" },
-
-  topSection: { alignItems: "center", marginBottom: 20 },
-
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 2,
-    borderColor: "#2D665B", 
-  },
-
-  name: { fontSize: 22, fontWeight: "700", marginTop: 10, color: "#EAFDF4" },
-  email: { fontSize: 14, color: "#D1FADF", marginBottom: 10 },
-
-  editButton: {
-    borderColor: "#22C55E",
-    borderWidth: 1.5,
-    paddingVertical: 8,
-    paddingHorizontal: 22,
-    borderRadius: 22,
-    marginTop: 10,
-  },
-  editButtonText: { color: "#EAFDF4", fontSize: 14, fontWeight: "600" },
-
-  card: {
-    width: "90%",
-    backgroundColor: "#121E18", 
-    borderRadius: 14,
-    padding: 15,
-    marginBottom: 15,
-    borderColor: "#2D665B",
-    borderWidth: 1,
-  },
-
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-  },
-
-  label: { fontSize: 16, color: "#D1FADF" },
-  value: { fontSize: 16, color: "#EAFDF4", fontWeight: "600" },
-
-  arrow: { fontSize: 18, color: "#22C55E" },
-
-  divider: { height: 1, backgroundColor: "#2D665B", opacity: 0.4 },
-
-  historyContainer: {
-    backgroundColor: "#121E18",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#2D665B",
-  },
-
-  historyRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 10,
-  },
-
-  historyTitle: { fontSize: 15, fontWeight: "500", color: "#EAFDF4" },
-  dropdownIcon: { fontSize: 18, color: "#22C55E" },
-
-  expandedBox: {
-    backgroundColor: "#0A1611",
-    padding: 12,
-    borderRadius: 10,
-    marginTop: 6,
-    borderWidth: 1,
-    borderColor: "#2D665B",
-  },
-
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    marginBottom: 6,
-    color: "#EAFDF4",
-  },
-
-  resultRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 4,
-  },
-
-  resultLabel: { fontWeight: "600", color: "#D1FADF" },
-  resultValue: { opacity: 0.9, color: "#EAFDF4" },
-
-  totalLine: {
-    marginTop: 10,
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#22C55E",
-  },
-
-  
-  logoutButton: {
-    width: "90%",
-    borderWidth: 1.5,
-    borderColor: "#22C55E",
-    paddingVertical: 15,
-    borderRadius: 14,
-    alignItems: "center",
-    marginTop: 10,
-    backgroundColor: "transparent",
-  },
-
-  logoutText: { color: "#22C55E", fontSize: 16, fontWeight: "600" },
-
-  
-  authCard: {
-    width: "85%",
-    backgroundColor: "#121E18",
-    paddingVertical: 30,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#2D665B",
-  },
-
-  authTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#EAFDF4",
-    marginBottom: 10,
-  },
-
-  authButton: {
-    width: "80%",
-    borderWidth: 1.5,
-    borderColor: "#22C55E",
-    paddingVertical: 12,
-    borderRadius: 25,
-    alignItems: "center",
-    marginBottom: 12,
-  },
-
-  authSecondaryButton: {
-    borderColor: "#4EA89A",
-  },
-
-  authButtonText: {
-    color: "#EAFDF4",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-});
+}

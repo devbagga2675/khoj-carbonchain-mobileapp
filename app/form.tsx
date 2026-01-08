@@ -12,9 +12,10 @@ import {
   Platform,
   UIManager,
   Alert,
+  ActivityIndicator,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// import { styled } from 'nativewind'; // Not strictly needed if using className directly with Babel plugin
 // Enable LayoutAnimation for Android
 if (
   Platform.OS === "android" &&
@@ -22,6 +23,20 @@ if (
 ) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
+
+// ✅ 1. CONFIGURATION
+const BASE_URL = "http://45.114.212.131:8000";
+
+// ✅ 2. HELPER: Get the persistent Guest ID
+const getGuestId = async () => {
+  let id = await AsyncStorage.getItem("guestId");
+  if (!id) {
+    const randomPart = Math.floor(Math.random() * 10000);
+    id = `guest_${Date.now()}_${randomPart}`;
+    await AsyncStorage.setItem("guestId", id);
+  }
+  return id;
+};
 
 export interface CarbonInput {
   name?: string;
@@ -41,7 +56,7 @@ type FieldVisibility = {
   [key in keyof CarbonInput]?: boolean;
 };
 
-// --- EXTRACTED COMPONENTS (Color Scheme Applied) ---
+// --- EXTRACTED COMPONENTS ---
 
 const CheckboxRow = ({
   label,
@@ -65,17 +80,14 @@ const CheckboxRow = ({
       <View
         className="w-5 h-5 rounded border-2 mr-2.5 items-center justify-center"
         style={{
-          // The color prop for the active state is used directly here for variety (e.g., orange, blue, green)
           backgroundColor: isVisible ? color : "transparent",
-          borderColor: isVisible ? color : "#3B82F6", // Using a default Tailwind blue for inactive border
+          borderColor: isVisible ? color : "#3B82F6",
         }}
       >
-        {/* Switched inner box to text-dark-DEFAULT (lightest) */}
         {isVisible && (
           <View className="w-2.5 h-2.5 bg-dark-DEFAULT rounded-[1px]" />
         )}
       </View>
-      {/* Switched text color to high-contrast light text */}
       <Text className="text-sm text-dark font-medium">{label}</Text>
     </TouchableOpacity>
   );
@@ -98,15 +110,12 @@ const InputField = ({
 
   return (
     <View className="ml-[30px] mb-3">
-      {/* Switched label to secondary light text */}
       <Text className="text-xs text-dark-100 mb-1.5">{label}</Text>
       <TextInput
-        // Switched input background to card, border to primary-dark, text to high-contrast light
         className="h-10 border border-secondary-200 rounded-md px-3 bg-card text-sm text-dark"
         value={value}
         onChangeText={onChange}
         placeholder={placeholder}
-        // Switched placeholder color to subtle neutral
         placeholderTextColor="#86EFAC"
         keyboardType="numeric"
       />
@@ -114,9 +123,10 @@ const InputField = ({
   );
 };
 
-// --- MAIN COMPONENT (Color Scheme Applied) ---
+// --- MAIN COMPONENT ---
 
 export default function Form() {
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<CarbonInput>({
     name: "",
     address: "",
@@ -151,7 +161,6 @@ export default function Form() {
         newState[field] = !isVisible;
       });
 
-      // Data Cleaning
       if (isVisible) {
         setFormData((currentData) => {
           const cleanedData = { ...currentData };
@@ -164,36 +173,85 @@ export default function Form() {
     });
   };
 
-  const handleSubmit = () => {
-    // TEST MODE: Using dummy data to visualize the result page
-    const payload = {
-      name: "Eco Test Home",
-      address: "42 Green Way, Vadodara",
-      gridElectricity: "450",
-      gasPNG: "25",
-      cngCylinder: "0",
-      petrol: "40",
-      diesel: "0",
-      cng: "15",
-      solarPanels: "4",
-      solarCapacity: "1.5",
-      treeCount: "5",
-    };
+  // 🔥 CORRECTED: Uses proper API Endpoint and Logic
+  const handleCalculateImpact = async () => {
+    setLoading(true);
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const guestId = await getGuestId(); // Get the ID
 
-    console.log("Sending Dummy Payload:", payload);
+      // 1. Prepare Payload
+      const payload: any = {
+        name: formData.name || "My Calculation",
+        address: formData.address || "",
+        lightUnits: Number(formData.gridElectricity) || 0, // Doc says 'lightUnits', not gridElectricity
+        gasUnits: Number(formData.gasPNG) || 0,
+        petrolUnits: Number(formData.petrol) || 0,
+        dieselUnits: Number(formData.diesel) || 0,
+        cngUnits: Number(formData.cng) || 0,
+        treeCount: Number(formData.treeCount) || 0,
+        solarPanels: Number(formData.solarPanels) || 0,
+        // Add other fields if your API supports them, otherwise map them carefully
+      };
 
-    router.push({
-      pathname: "/result",
-      params: { ...formData } as any,
-    });
+      // 2. Add Headers
+      const headers: any = {
+        "Content-Type": "application/json",
+      };
+      
+      if (token) {
+        // Logged In User
+        headers["Authorization"] = `Bearer ${token}`;
+      } else {
+        // Guest User: Must add guestId to BODY (Per docs Section 6.1)
+        payload["guestId"] = guestId;
+      }
+
+      console.log("Sending Payload:", payload);
+
+      // 3. Send Request (ALWAYS to /api/calculate)
+      const response = await fetch(`${BASE_URL}/api/calculate`, {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(payload),
+      });
+
+      const textResponse = await response.text();
+      console.log("Response:", textResponse);
+
+      let data;
+      try {
+        data = JSON.parse(textResponse);
+      } catch (e) {
+        throw new Error("Server returned an error page instead of data.");
+      }
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Calculation failed.");
+      }
+
+      // 4. Navigate to Result
+      router.push({
+        pathname: "/result",
+        params: {
+          name: payload.name,
+          co2: data.data?.co2 || 0, // Accessing data.data.co2 based on docs
+          solarNeedPanels: 0, // API doesn't seem to return suggestions in docs, adjust if needed
+          treeNeed: 0,
+        },
+      });
+
+    } catch (error: any) {
+      Alert.alert("Calculation Error", error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <SafeAreaView className="flex-1 bg-primary">
-      {/* Set overall background to primary dark */}
       <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
-        {/* Header / Top Card */}
-        {/* Set card background, rounded bottom corner retained */}
+        {/* Header */}
         <View className="bg-card pt-[60px] px-6 pb-8 rounded-b-xl mb-6">
           <TouchableOpacity
             onPress={() => router.back()}
@@ -207,67 +265,47 @@ export default function Form() {
               Measure Your Impact
             </Text>
             <Text className="text-base text-secondary-100 leading-6 opacity-90">
-              Select the categories that apply to you to input your bimonthly
-              data. Tap the checkboxes to reveal fields for your emissions and
-              green assets.
+              Select the categories that apply to you.
             </Text>
           </View>
-          {/* <Text className="text-[15px]  leading-[22px]">
-            <Text className="font-semibold text-dark-100">
-              Active Categories:{" "}
-              {Object.values(visibleFields).filter(Boolean).length} • Inputs:{" "}
-              {
-                Object.keys(formData).filter(
-                  (k) => formData[k as keyof CarbonInput] !== ""
-                ).length
-              }
-            </Text>
-          </Text> */}
         </View>
 
         {/* 1. Identifiers */}
         <View className="mb-7 px-6">
-          {/* Switched to high-contrast light text */}
           <Text className="text-lg font-semibold text-dark mb-3">Details</Text>
           <View className="mb-3">
-            {/* Switched to secondary light text */}
             <Text className="text-xs text-dark-100 mb-1.5">Name / Entity</Text>
             <TextInput
-              // Switched input background to card, border to primary-dark, text to high-contrast light
               className="h-10 border border-secondary-200 rounded-md px-3 bg-card text-sm text-dark"
               value={formData.name}
               onChangeText={(t) => handleChange("name", t)}
               placeholder="e.g. Home"
-              placeholderTextColor="#86EFAC" // Subtle neutral
+              placeholderTextColor="#86EFAC"
             />
           </View>
           <View className="mb-3">
-            {/* Switched to secondary light text */}
             <Text className="text-xs text-dark-100 mb-1.5">Address</Text>
             <TextInput
-              // Switched input background to card, border to primary-dark, text to high-contrast light
               className="h-10 border border-secondary-200 rounded-md px-3 bg-card text-sm text-dark"
               value={formData.address}
               onChangeText={(t) => handleChange("address", t)}
               placeholder="City, State"
-              placeholderTextColor="#86EFAC" // Subtle neutral
+              placeholderTextColor="#86EFAC"
             />
           </View>
         </View>
 
         {/* 2. Domestic Energy */}
         <View className="mb-7 px-6">
-          {/* Switched to high-contrast light text */}
           <Text className="text-lg font-semibold text-dark mb-3">
             Domestic Energy
           </Text>
-
           <CheckboxRow
             label="Grid Electricity"
             fieldsToCheck={["gridElectricity"]}
             isVisible={!!visibleFields.gridElectricity}
             onToggle={() => toggleVisibility(["gridElectricity"])}
-            color="#fb923c" // Orange (Warning) maintained for a visual category cue
+            color="#fb923c"
           />
           <InputField
             label="Consumption (kWh)"
@@ -276,13 +314,12 @@ export default function Form() {
             isVisible={!!visibleFields.gridElectricity}
             placeholder="0"
           />
-
           <CheckboxRow
             label="Piped Gas (PNG)"
             fieldsToCheck={["gasPNG"]}
             isVisible={!!visibleFields.gasPNG}
             onToggle={() => toggleVisibility(["gasPNG"])}
-            color="#fb923c" // Orange (Warning) maintained
+            color="#fb923c"
           />
           <InputField
             label="Consumption (SCM)"
@@ -291,13 +328,12 @@ export default function Form() {
             isVisible={!!visibleFields.gasPNG}
             placeholder="0"
           />
-
           <CheckboxRow
             label="CNG Cylinder"
             fieldsToCheck={["cngCylinder"]}
             isVisible={!!visibleFields.cngCylinder}
             onToggle={() => toggleVisibility(["cngCylinder"])}
-            color="#fb923c" // Orange (Warning) maintained
+            color="#fb923c"
           />
           <InputField
             label="Weight (kg)"
@@ -310,17 +346,15 @@ export default function Form() {
 
         {/* 3. Transport */}
         <View className="mb-7 px-6">
-          {/* Switched to high-contrast light text */}
           <Text className="text-lg font-semibold text-dark mb-3">
             Transport
           </Text>
-
           <CheckboxRow
             label="Petrol Vehicle"
             fieldsToCheck={["petrol"]}
             isVisible={!!visibleFields.petrol}
             onToggle={() => toggleVisibility(["petrol"])}
-            color="#3b82f6" // Blue (Info) maintained for a visual category cue
+            color="#3b82f6"
           />
           <InputField
             label="Fuel Used (Liters)"
@@ -329,13 +363,12 @@ export default function Form() {
             isVisible={!!visibleFields.petrol}
             placeholder="0"
           />
-
           <CheckboxRow
             label="Diesel Vehicle"
             fieldsToCheck={["diesel"]}
             isVisible={!!visibleFields.diesel}
             onToggle={() => toggleVisibility(["diesel"])}
-            color="#3b82f6" // Blue (Info) maintained
+            color="#3b82f6"
           />
           <InputField
             label="Fuel Used (Liters)"
@@ -344,13 +377,12 @@ export default function Form() {
             isVisible={!!visibleFields.diesel}
             placeholder="0"
           />
-
           <CheckboxRow
             label="CNG Vehicle"
             fieldsToCheck={["cng"]}
             isVisible={!!visibleFields.cng}
             onToggle={() => toggleVisibility(["cng"])}
-            color="#3b82f6" // Blue (Info) maintained
+            color="#3b82f6"
           />
           <InputField
             label="Fuel Used (kg)"
@@ -363,17 +395,15 @@ export default function Form() {
 
         {/* 4. Green Assets */}
         <View className="mb-7 px-6">
-          {/* Switched to high-contrast light text */}
           <Text className="text-lg font-semibold text-dark mb-3">
             Green Assets
           </Text>
-
           <CheckboxRow
             label="Solar Installation"
             fieldsToCheck={["solarPanels", "solarCapacity"]}
             isVisible={!!visibleFields.solarPanels}
             onToggle={() => toggleVisibility(["solarPanels", "solarCapacity"])}
-            color="#22C55E" // Primary Accent (Secondary-DEFAULT) maintained for a visual category cue
+            color="#22C55E"
           />
           <InputField
             label="Number of Panels"
@@ -389,13 +419,12 @@ export default function Form() {
             isVisible={!!visibleFields.solarCapacity}
             placeholder="kW"
           />
-
           <CheckboxRow
             label="Trees Planted"
             fieldsToCheck={["treeCount"]}
             isVisible={!!visibleFields.treeCount}
             onToggle={() => toggleVisibility(["treeCount"])}
-            color="#22C55E" // Primary Accent (Secondary-DEFAULT) maintained
+            color="#22C55E"
           />
           <InputField
             label="Count"
@@ -407,15 +436,20 @@ export default function Form() {
         </View>
 
         {/* Action Area */}
-        <View className=" items-center px-6">
+        <View className="items-center px-6">
           <TouchableOpacity
-            className="w-full bg-green-500 py-3 px-[22px] rounded-full mt-4 shadow-lg shadow-secondary/20 h-14 items-center justify-center flex-row gap-2"
-            onPress={handleSubmit}
+            className="w-full bg-green-500 py-3 px-[22px] rounded-full mt-4 shadow-lg shadow-secondary/20 h-16 items-center justify-center flex-row gap-2"
+            onPress={handleCalculateImpact}
+            disabled={loading}
             activeOpacity={0.8}
           >
-            <Text className="text-black text-lg font-semibold tracking-wide">
-              Calculate Impact
-            </Text>
+            {loading ? (
+              <ActivityIndicator color="#000" />
+            ) : (
+              <Text className="text-black text-lg font-semibold tracking-wide">
+                Calculate Impact
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
       </ScrollView>

@@ -9,6 +9,8 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+// ✅ NEW: Import AsyncStorage
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width, height } = Dimensions.get("window");
 
@@ -32,6 +34,7 @@ export default function LandingScreen() {
   const line2Y = useRef(new Animated.Value(20)).current;
 
   useEffect(() => {
+    // ... [Previous 1-5 Animations Remain Unchanged] ...
     // 1️⃣ ICON APPEARS
     Animated.parallel([
       Animated.timing(logoOpacity, { toValue: 1, duration: 900, useNativeDriver: true }),
@@ -80,20 +83,26 @@ export default function LandingScreen() {
       Animated.timing(line2Y, { toValue: 0, duration: 900, useNativeDriver: true }).start();
     }, 5700);
 
-    // 6️⃣ FADE OUT & NAVIGATE
+    // 6️⃣ FADE OUT & DECIDE NAVIGATION
     setTimeout(() => {
       Animated.timing(screenFade, {
         toValue: 0,
         duration: 800,
         useNativeDriver: true,
-      }).start(() => {
-        // NAVIGATE TO YOUR TAB LAYOUT
-        router.replace("/(tabs)"); 
+      }).start(async () => {
+        // ✅ NEW: Check Token & Decide Destination
+        const token = await AsyncStorage.getItem("token");
+        if (token) {
+          router.replace("/(tabs)");
+        } else {
+          router.replace("/auth/login");
+        }
       });
     }, 7500);
   }, []);
 
   return (
+    // ... [JSX Remains Unchanged] ...
     <Animated.View className="flex-1 bg-[#040d07] justify-center" style={{ opacity: screenFade }}>
       
       {/* Background Blobs */}

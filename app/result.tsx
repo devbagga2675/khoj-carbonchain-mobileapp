@@ -1,141 +1,171 @@
-// app/result.tsx
-
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  SafeAreaView,
+  Share,
+  StatusBar,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+
+const calculateOffsets = (co2Val: number) => {
+  const trees = Math.ceil(co2Val / 20);
+  const solarKw = (co2Val / 230).toFixed(1);
+  return { trees, solarKw };
+};
 
 export default function Result() {
-  const router = useRouter();
   const params = useLocalSearchParams();
 
-  // Values passed from form after API call
-  const name = (params.name as string) || "Your Home";
-  const netCo2 = Number(params.co2) || 0;
-  const solarNeedPanels = Number(params.solarNeedPanels) || 0;
-  const treeNeed = Number(params.treeNeed) || 0;
+  const name = (params.name as string) || "Your Calculation";
+  const co2 = parseFloat(params.co2 as string) || 0;
 
-  const surplus = netCo2 < 0 ? Math.abs(Math.round(netCo2)) : 0;
-  const isNeutral = netCo2 <= 0;
+  const [offsets, setOffsets] = useState({ trees: 0, solarKw: "0" });
 
-  const [showSolarPath, setShowSolarPath] = useState(true);
+  useEffect(() => {
+    setOffsets(calculateOffsets(co2));
+  }, [co2]);
+
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: `I just calculated my carbon footprint: ${co2} kg CO2e! Calculated via Carbon Chain.`,
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const getSeverityColor = (value: number) => {
+    if (value < 200) return "text-secondary";
+    if (value < 500) return "text-warning";
+    return "text-danger";
+  };
+
+  const getSeverityBorder = (value: number) => {
+    if (value < 200) return "border-secondary";
+    if (value < 500) return "border-warning";
+    return "border-danger";
+  };
+
+  const getSeverityBg = (value: number) => {
+    // Using opacity on the card background instead of specific light colors
+    return "bg-card";
+  };
 
   return (
-    <View className="flex-1 bg-primary">
-      {/* Header */}
-      <View className="bg-card pt-[60px] px-6 pb-8 rounded-b-[32px] shadow-sm shadow-black/50">
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="w-11 h-11 rounded-full bg-card border border-secondary-200 items-center justify-center mb-6 shadow-md shadow-secondary/20 elevation-4"
-          activeOpacity={0.8}
-        >
-          <Ionicons name="arrow-back" size={24} color="#EAFDF4" />
-        </TouchableOpacity>
-        <Text className="text-[28px] font-extrabold text-dark mb-2 -tracking-[0.5px]">
-          Calculation Result
-        </Text>
-        <Text className="text-[15px] text-dark-100 leading-[22px]">
-          Here is your carbon footprint summary for{"\n"}
-          <Text className="font-semibold text-secondary">{name}</Text>
-        </Text>
-      </View>
-
-      <ScrollView contentContainerStyle={{ paddingBottom: 60 }} className="px-6 pt-6" showsVerticalScrollIndicator={false}>
-        {/* Net footprint */}
-        <View className="bg-card rounded-3xl p-6 mb-6 shadow-lg shadow-black/50 border border-white/5 items-center">
-          <Text className="text-dark-100 text-sm font-semibold uppercase tracking-widest mb-2 opacity-70">
-            Net Carbon Footprint
+    <SafeAreaView className="flex-1 bg-primary">
+      <StatusBar barStyle="light-content" backgroundColor="#040D07" />
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+        <View className="px-6 pt-6 mb-6 flex-row justify-between items-center">
+          <TouchableOpacity
+            onPress={() => router.replace("/(tabs)")}
+            className="w-10 h-10 rounded-full bg-card items-center justify-center border border-secondary-200"
+          >
+            <Ionicons name="close" size={20} color="#EAFDF4" />
+          </TouchableOpacity>
+          <Text className="font-psemibold text-dark-100 uppercase tracking-widest text-xs">
+            Result
           </Text>
-          <Text className="text-[64px] leading-[70px] font-black text-secondary">
-            {isNeutral ? 0 : Math.round(netCo2)}
-          </Text>
-          <Text className="text-2xl text-secondary font-bold opacity-80">kg CO₂e</Text>
-          {isNeutral && (
-            <View className="mt-4 px-6 py-2 bg-secondary rounded-full shadow-sm">
-              <Text className="text-black font-bold text-xs uppercase tracking-widest">
-                Carbon Neutral{surplus > 0 ? " + Surplus!" : ""}
-              </Text>
-            </View>
-          )}
-          {surplus > 0 && (
-            <Text className="text-lg text-secondary font-bold mt-3">
-              You saved an extra {surplus} kg CO₂e!
-            </Text>
-          )}
+          <View className="w-10" />
         </View>
 
-        {/* Suggestions - only when net > 0 */}
-        {netCo2 > 0 && (
-          <View className="bg-card rounded-2xl p-6 border border-white/10 mb-6 shadow-lg shadow-black/40">
-            <Text className="text-lg font-bold text-center text-dark mb-6">
-              Path to Carbon Neutrality
+        <View className="px-6 mb-8">
+          <View
+            className={`p-8 rounded-[32px] items-center border-2 ${getSeverityBorder(co2)} ${getSeverityBg(co2)}`}
+          >
+            <Text className="text-dark-100 font-pmedium text-sm mb-2">
+              {name}
             </Text>
-
-            {/* Toggle */}
-            <View className="flex-row justify-center gap-4 mb-8">
-              <TouchableOpacity
-                onPress={() => setShowSolarPath(true)}
-                className={`px-6 py-2 rounded-full ${showSolarPath ? 'bg-secondary' : 'bg-white/10 border border-white/20'}`}
-              >
-                <Text className={`font-bold text-sm ${showSolarPath ? 'text-black' : 'text-dark-100'}`}>Go Solar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setShowSolarPath(false)}
-                className={`px-6 py-2 rounded-full ${!showSolarPath ? 'bg-secondary' : 'bg-white/10 border border-white/20'}`}
-              >
-                <Text className={`font-bold text-sm ${!showSolarPath ? 'text-black' : 'text-dark-100'}`}>Plant Trees</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Selected path */}
-            <View className="items-center">
-              {showSolarPath ? (
-                <>
-                  <View className="w-20 h-20 bg-blue-500/10 rounded-full items-center justify-center mb-4 border border-blue-500/20">
-                    <Ionicons name="sunny" size={48} color="#3b82f6" />
-                  </View>
-                  <Text className="text-5xl font-extrabold text-blue-400 mb-2">{solarNeedPanels}</Text>
-                  <Text className="text-lg font-bold text-dark-100 opacity-80 uppercase tracking-wider">Panels Needed</Text>
-                  <Text className="text-xs text-dark-100 opacity-50 mt-4">
-                    One panel reduces ~86 kg CO₂e
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <View className="w-20 h-20 bg-green-500/10 rounded-full items-center justify-center mb-4 border border-green-500/20">
-                    <Ionicons name="leaf" size={48} color="#22c55e" />
-                  </View>
-                  <Text className="text-5xl font-extrabold text-green-400 mb-2">{treeNeed}</Text>
-                  <Text className="text-lg font-bold text-dark-100 opacity-80 uppercase tracking-wider">Trees Needed</Text>
-                  <Text className="text-xs text-dark-100 opacity-50 mt-4">
-                    One tree reduces 5 kg CO₂e
-                  </Text>
-                </>
-              )}
-            </View>
-          </View>
-        )}
-
-        {/* message: when neutral or surplus */}
-        {isNeutral && (
-          <View className="items-center py-12">
-            <View className="w-24 h-24 bg-green-500/20 rounded-full items-center justify-center mb-6 border border-green-500/30">
-              <Ionicons name="checkmark-circle" size={72} color="#22c55e" />
-            </View>
-            <Text className="text-2xl font-bold text-green-400 mb-3">Already Carbon Neutral!</Text>
-            <Text className="text-center text-dark-100 text-sm px-6">
-              Your solar panels and trees are offsetting all your emissions — and even creating a surplus.
-            </Text>
-            {surplus > 0 && (
-              <Text className="text-4xl font-extrabold text-green-400 mt-6">
-                +{surplus} kg CO₂e saved
+            <View className="flex-row items-baseline">
+              <Text className={`text-6xl font-pbold ${getSeverityColor(co2)}`}>
+                {co2.toFixed(1)}
               </Text>
-            )}
-          </View>
-        )}
+              <Text className="text-dark-100 font-pmedium ml-2 text-lg">
+                kg
+              </Text>
+            </View>
+            <Text className="text-dark-100 font-pregular text-sm mt-1 mb-6">
+              CO2e Emissions (Bimonthly)
+            </Text>
 
-        <View className="h-20" />
+            <View className="w-full h-[1px] bg-secondary-200 mb-6" />
+
+            <Text className="text-center text-dark font-pregular leading-6 px-4">
+              {co2 < 200
+                ? "Great job! Your footprint is lower than average."
+                : co2 < 500
+                  ? "Moderate impact. Consider small lifestyle changes to improve."
+                  : "High impact. You have significant room for reduction."}
+            </Text>
+          </View>
+        </View>
+
+        <View className="px-6">
+          <Text className="text-xl font-pbold text-dark mb-4">
+            To Offset This Impact
+          </Text>
+
+          <View className="flex-row gap-4 mb-4">
+            <View className="flex-1 bg-card p-5 rounded-2xl border border-secondary-200">
+              <View className="bg-secondary-200/20 w-10 h-10 rounded-full items-center justify-center mb-3">
+                <Ionicons name="leaf" size={20} color="#22C55E" />
+              </View>
+              <Text className="text-secondary font-pbold text-3xl mb-1">
+                {offsets.trees}
+              </Text>
+              <Text className="text-dark font-psemibold mb-1">Trees</Text>
+              <Text className="text-dark-100 font-pregular text-xs leading-4">
+                Planting {offsets.trees} mature trees could absorb this amount
+                in a year.
+              </Text>
+            </View>
+
+            <View className="flex-1 bg-card p-5 rounded-2xl border border-secondary-200">
+              <View className="bg-blue-900/30 w-10 h-10 rounded-full items-center justify-center mb-3">
+                <Ionicons name="sunny" size={20} color="#60A5FA" />
+              </View>
+              <Text className="text-blue-400 font-pbold text-3xl mb-1">
+                {offsets.solarKw}
+              </Text>
+              <Text className="text-dark font-psemibold mb-1">kW Solar</Text>
+              <Text className="text-dark-100 font-pregular text-xs leading-4">
+                A {offsets.solarKw}kW solar rooftop system would offset this
+                energy.
+              </Text>
+            </View>
+          </View>
+
+          <View className="gap-3 mt-4">
+            <TouchableOpacity
+              onPress={handleShare}
+              className="flex-row items-center justify-center bg-secondary py-4 rounded-xl"
+            >
+              <Ionicons
+                name="share-social-outline"
+                size={20}
+                color="black"
+                style={{ marginRight: 8 }}
+              />
+              <Text className="text-dark-200 font-pbold text-base">
+                Share Result
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.replace("/(tabs)")}
+              className="flex-row items-center justify-center bg-card py-4 rounded-xl border border-secondary-200"
+            >
+              <Text className="text-dark font-psemibold text-base">
+                Back to Home
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
