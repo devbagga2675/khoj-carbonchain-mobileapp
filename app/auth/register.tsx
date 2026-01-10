@@ -13,8 +13,7 @@ import {
   ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-
-const BASE_URL = "http://45.114.212.131:8000";
+import { API_BASE as BASE_URL } from "../../services/api";
 
 export default function Register() {
   const [loading, setLoading] = useState(false);

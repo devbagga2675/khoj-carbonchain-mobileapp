@@ -24,19 +24,7 @@ if (
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-// ✅ 1. CONFIGURATION
-const BASE_URL = "http://45.114.212.131:8000";
-
-// ✅ 2. HELPER: Get the persistent Guest ID
-const getGuestId = async () => {
-  let id = await AsyncStorage.getItem("guestId");
-  if (!id) {
-    const randomPart = Math.floor(Math.random() * 10000);
-    id = `guest_${Date.now()}_${randomPart}`;
-    await AsyncStorage.setItem("guestId", id);
-  }
-  return id;
-};
+import { API_BASE as BASE_URL, getGuestId } from "../services/api";
 
 export interface CarbonInput {
   name?: string;
@@ -198,7 +186,7 @@ export default function Form() {
       const headers: any = {
         "Content-Type": "application/json",
       };
-      
+
       if (token) {
         // Logged In User
         headers["Authorization"] = `Bearer ${token}`;

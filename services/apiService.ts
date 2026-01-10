@@ -1,14 +1,13 @@
-import { 
-  AuthResponse, 
-  CalculationInput, 
-  CalculationResult, 
-  CalculationHistoryResponse, 
+import {
+  AuthResponse,
+  CalculationInput,
+  CalculationResult,
+  CalculationHistoryResponse,
   GuestProfileResponse,
   User,
   CommonResponse
 } from "../interfaces/api";
-
-const BASE_URL = "http://45.114.212.131:8000";
+import { API_BASE as BASE_URL } from "./api";
 
 /**
  * Industry standard API service for Carbon Chain Khoj.
@@ -23,15 +22,15 @@ class ApiService {
 
   private getHeaders(isMultipart = false) {
     const headers: HeadersInit = {};
-    
+
     if (!isMultipart) {
       headers["Content-Type"] = "application/json";
     }
-    
+
     if (this.token) {
       headers["Authorization"] = `Bearer ${this.token}`;
     }
-    
+
     return headers;
   }
 

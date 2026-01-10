@@ -14,7 +14,6 @@
     },
     "android": {
       "package": "com.khoj.carbonchain",
-      "versionCode": 1,
       "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/app-logo.png",
@@ -37,7 +36,15 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
@@ -45,7 +52,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "1708051d-c9d5-4bcc-bdf0-aa4c847da1ce"
+        "projectId": "38948eb2-eb40-4b0e-ab31-fd46e8d23e6e"
       }
     }
   }

@@ -16,9 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 
-import { API_BASE, getGuestId } from "../../services/api";
-
-const BASE_URL = "http://45.114.212.131:8000";
+import { API_BASE as BASE_URL, getGuestId } from "../../services/api";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -92,7 +90,7 @@ export default function LoginScreen() {
 
       // 2. "Login" by fetching the guest profile to verify connectivity
       // Endpoint: GET /api/guest/profile/<guestId>
-      const response = await fetch(`${API_BASE}/api/guest/profile/${guestId}`, {
+      const response = await fetch(`${BASE_URL}/api/guest/profile/${guestId}`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
       });
